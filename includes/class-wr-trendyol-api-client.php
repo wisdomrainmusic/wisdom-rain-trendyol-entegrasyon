@@ -56,8 +56,9 @@ class WR_Trendyol_API_Client {
      * @var array
      */
     protected $environments = [
-        WR_Trendyol_Plugin::ENV_PROD    => 'https://api.trendyol.com/seller-products',
-        WR_Trendyol_Plugin::ENV_SANDBOX => 'https://stageapi.trendyol.com/seller-products',
+        // Yeni APIGW hostları (prod & stage)
+        WR_Trendyol_Plugin::ENV_PROD    => 'https://apigw.trendyol.com',
+        WR_Trendyol_Plugin::ENV_SANDBOX => 'https://stageapigw.trendyol.com',
     ];
 
     /**
