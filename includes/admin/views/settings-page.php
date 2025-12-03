@@ -6,6 +6,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 /** @var array  $settings */
 /** @var string $test_url */
 
+$selected_category = get_option( 'wr_trendyol_category_id', '' );
+$category_options  = function_exists( 'wr_trendyol_get_category_options' ) ? wr_trendyol_get_category_options() : [];
+
 ?>
 <div class="wrap">
     <h1>Wisdom Rain – Trendyol Entegrasyon</h1>
@@ -89,6 +92,23 @@ if ( ! defined( 'ABSPATH' ) ) {
                             Sandbox / Test (dokümana göre URL ayrıca ayarlanmalıdır)
                         </label>
                     </fieldset>
+                </td>
+            </tr>
+
+            <tr>
+                <th scope="row">
+                    <label for="wr_trendyol_category_id"><?php esc_html_e( 'Trendyol Category', 'wisdom-rain-trendyol-entegrasyon' ); ?></label>
+                </th>
+                <td>
+                    <select name="wr_trendyol_category_id" id="wr_trendyol_category_id" style="min-width: 320px;">
+                        <option value=""><?php esc_html_e( '— Select Trendyol Category —', 'wisdom-rain-trendyol-entegrasyon' ); ?></option>
+                        <?php foreach ( $category_options as $cat_id => $label ) : ?>
+                            <option value="<?php echo esc_attr( $cat_id ); ?>" <?php selected( (string) $selected_category, (string) $cat_id ); ?>><?php echo esc_html( $label ); ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                    <p class="description">
+                        <?php esc_html_e( 'Select the Trendyol category using the hierarchical list.', 'wisdom-rain-trendyol-entegrasyon' ); ?>
+                    </p>
                 </td>
             </tr>
 
