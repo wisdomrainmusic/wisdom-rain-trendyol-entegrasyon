@@ -11,23 +11,21 @@ class WR_Trendyol_Categories {
      * @return array
      */
     public static function get_categories_raw() {
+        // API'den gelen kategoriyi option'dan oku
+        if ( class_exists( 'WRTI_Category_Manager' ) && method_exists( 'WRTI_Category_Manager', 'get_categories' ) ) {
+            $data = WRTI_Category_Manager::get_categories();
+            return is_array( $data ) ? $data : array();
+        }
+
+        // Eski fallback: JSON dosyası
         $file = WR_TRENDYOL_PLUGIN_DIR . 'assets/data/trendyol-categories.json';
-
-        if ( ! file_exists( $file ) ) {
-            return array();
+        if ( file_exists( $file ) ) {
+            $json = file_get_contents( $file );
+            $data = json_decode( $json, true );
+            return is_array( $data ) ? $data : array();
         }
 
-        $json = file_get_contents( $file );
-        if ( ! $json ) {
-            return array();
-        }
-
-        $data = json_decode( $json, true );
-        if ( ! is_array( $data ) ) {
-            return array();
-        }
-
-        return $data;
+        return array();
     }
 
     /**
