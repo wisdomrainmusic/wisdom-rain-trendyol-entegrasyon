@@ -62,6 +62,12 @@ if ( is_admin() ) {
 require_once __DIR__ . '/includes/wrti-ajax-loader.php';
 require_once __DIR__ . '/wrti-plugin.php';
 
+add_action( 'save_post_product', function( $post_id ) {
+    if ( isset( $_POST['_wr_trendyol_category_id'] ) ) {
+        update_post_meta( $post_id, '_wr_trendyol_category_id', sanitize_text_field( wp_unslash( $_POST['_wr_trendyol_category_id'] ) ) );
+    }
+} );
+
 function wr_trendyol_bootstrap() {
     if ( ! class_exists( 'WooCommerce' ) ) {
         add_action( 'admin_notices', function () {
