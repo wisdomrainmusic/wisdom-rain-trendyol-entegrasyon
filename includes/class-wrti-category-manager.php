@@ -17,6 +17,8 @@ class WRTI_Category_Manager {
         $apiSecret = $settings['api_secret'];
 
         $url = "https://apigw.trendyol.com/integration/product/product-categories";
+        error_log("WR TRENDYOL DEBUG: CATEGORY REQUEST START");
+        error_log("WR TRENDYOL DEBUG: CATEGORY URL => " . $url);
 
         $args = [
             'headers' => [
@@ -28,6 +30,7 @@ class WRTI_Category_Manager {
         ];
 
         $response = wp_remote_get($url, $args);
+        error_log("WR TRENDYOL DEBUG: RAW RESPONSE => " . print_r($response, true));
 
         if (is_wp_error($response)) {
             return $response;
@@ -39,6 +42,7 @@ class WRTI_Category_Manager {
         }
 
         update_option(self::$option_key, $body);
+        error_log("WR TRENDYOL DEBUG: CATEGORY JSON SAVED => LENGTH: " . strlen($body));
 
         return true;
     }
