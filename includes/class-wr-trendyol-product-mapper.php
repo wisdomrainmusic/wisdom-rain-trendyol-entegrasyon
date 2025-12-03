@@ -138,8 +138,10 @@ class WR_Trendyol_Product_Mapper {
         $payload = array();
 
         foreach ( $attrs as $attr ) {
-            $attr_id  = isset( $attr['id'] ) ? (int) $attr['id'] : 0;
-            $required = ! empty( $attr['required'] ) || ! empty( $attr['mandatory'] );
+            $attr_id      = isset( $attr['attributeId'] ) ? (int) $attr['attributeId'] : ( isset( $attr['id'] ) ? (int) $attr['id'] : 0 );
+            $required     = ! empty( $attr['required'] ) || ! empty( $attr['mandatory'] );
+            $multiple     = ! empty( $attr['multipleValues'] );
+            $allow_custom = ! empty( $attr['customValue'] ) || ! empty( $attr['allowCustom'] );
 
             if ( ! $attr_id ) {
                 continue;
@@ -148,7 +150,23 @@ class WR_Trendyol_Product_Mapper {
             $meta_key = '_wr_trendyol_attr_' . $attr_id;
             $stored   = get_post_meta( $product_id, $meta_key, true );
 
-            if ( ! is_array( $stored ) || ( empty( $stored['value_id'] ) && $stored['custom'] === '' ) ) {
+            $stored_values = [];
+            $stored_custom = '';
+
+            if ( is_array( $stored ) ) {
+                if ( isset( $stored['value_id'] ) ) {
+                    $stored_values = (array) $stored['value_id'];
+                }
+
+                if ( isset( $stored['custom'] ) ) {
+                    $stored_custom = $stored['custom'];
+                }
+            }
+
+            $stored_values = array_values( array_filter( array_map( 'absint', $stored_values ) ) );
+            $stored_custom = is_string( $stored_custom ) ? trim( $stored_custom ) : '';
+
+            if ( empty( $stored_values ) && '' === $stored_custom ) {
                 if ( $required ) {
                     return new WP_Error(
                         'wr_trendyol_missing_attribute',
@@ -158,19 +176,27 @@ class WR_Trendyol_Product_Mapper {
                 continue;
             }
 
-            $entry = array(
-                'attributeId' => $attr_id,
-            );
-
-            if ( ! empty( $stored['value_id'] ) ) {
-                $entry['attributeValueId'] = (int) $stored['value_id'];
+            // Çoklu seçimde her value_id için ayrı entry ekliyoruz.
+            if ( $multiple && ! empty( $stored_values ) ) {
+                foreach ( $stored_values as $value_id ) {
+                    $payload[] = [
+                        'attributeId'      => $attr_id,
+                        'attributeValueId' => (int) $value_id,
+                    ];
+                }
+            } elseif ( ! empty( $stored_values ) ) {
+                $payload[] = [
+                    'attributeId'      => $attr_id,
+                    'attributeValueId' => (int) $stored_values[0],
+                ];
             }
 
-            if ( ! empty( $stored['custom'] ) ) {
-                $entry['customValue'] = $stored['custom'];
+            if ( $allow_custom && '' !== $stored_custom ) {
+                $payload[] = [
+                    'attributeId' => $attr_id,
+                    'customValue' => $stored_custom,
+                ];
             }
-
-            $payload[] = $entry;
         }
 
         return $payload;

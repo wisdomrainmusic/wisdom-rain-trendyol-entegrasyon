@@ -293,11 +293,22 @@ class WR_Trendyol_API_Client {
             return $response;
         }
 
-        $body   = isset( $response['body'] ) ? $response['body'] : array();
-        $attrs  = isset( $body['attributes'] ) ? $body['attributes'] : $body;
+        $body = isset( $response['body'] ) ? $response['body'] : array();
 
+        // Trendyol yeni attribute formatı
+        $attrs = [];
+
+        if ( isset( $body['categoryAttributes'] ) && is_array( $body['categoryAttributes'] ) ) {
+            $attrs = $body['categoryAttributes'];
+        }
+        // Eski fallback (bazı seller hesaplarında farklı dönebiliyor)
+        elseif ( isset( $body['attributes'] ) && is_array( $body['attributes'] ) ) {
+            $attrs = $body['attributes'];
+        }
+
+        // Her ihtimale karşı array değilse boş yap
         if ( ! is_array( $attrs ) ) {
-            $attrs = array();
+            $attrs = [];
         }
 
         set_transient( $cache_key, $attrs, HOUR_IN_SECONDS );
