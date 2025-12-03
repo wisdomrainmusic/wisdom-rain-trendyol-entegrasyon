@@ -229,7 +229,14 @@ class WR_Trendyol_API_Client {
 
         error_log( 'WR TRENDYOL DEBUG: CATEGORY REQUEST START' );
 
-        $response = $this->request( 'GET', '/product-categories' );
+        // NEW OFFICIAL ENDPOINT:
+        // /v1/{sellerId}/product-categories
+
+        $path = sprintf( '/v1/%s/product-categories', $this->seller_id );
+
+        $response = $this->request( 'GET', $path );
+
+        error_log( 'WR TRENDYOL DEBUG: CATEGORY URL => ' . $path );
 
         error_log( 'WR TRENDYOL DEBUG: CATEGORY RAW RESPONSE => ' . print_r( $response, true ) );
 
@@ -271,7 +278,10 @@ class WR_Trendyol_API_Client {
             return $cached;
         }
 
-        $path = sprintf( '/product-categories/%d/attributes', $category_id );
+        // NEW OFFICIAL ENDPOINT:
+        // /v1/{sellerId}/product-categories/{categoryId}/attributes
+
+        $path = sprintf( '/v1/%s/product-categories/%d/attributes', $this->seller_id, $category_id );
         $response = $this->request( 'GET', $path );
 
         if ( is_wp_error( $response ) ) {
