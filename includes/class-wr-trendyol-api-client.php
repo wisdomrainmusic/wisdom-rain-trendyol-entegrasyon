@@ -227,9 +227,14 @@ class WR_Trendyol_API_Client {
             return $cached;
         }
 
+        error_log( 'WR TRENDYOL DEBUG: CATEGORY REQUEST START' );
+
         $response = $this->request( 'GET', '/product-categories' );
 
+        error_log( 'WR TRENDYOL DEBUG: CATEGORY RAW RESPONSE => ' . print_r( $response, true ) );
+
         if ( is_wp_error( $response ) ) {
+            error_log( 'WR TRENDYOL DEBUG: CATEGORY ERROR => ' . $response->get_error_message() );
             return $response;
         }
 
