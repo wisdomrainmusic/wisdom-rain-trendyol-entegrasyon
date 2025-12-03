@@ -56,8 +56,8 @@ class WR_Trendyol_API_Client {
      * @var array
      */
     protected $environments = [
-        WR_Trendyol_Plugin::ENV_PROD    => 'https://api.trendyol.com',
-        WR_Trendyol_Plugin::ENV_SANDBOX => 'https://stageapi.trendyol.com',
+        WR_Trendyol_Plugin::ENV_PROD    => 'https://api.trendyol.com/seller-products',
+        WR_Trendyol_Plugin::ENV_SANDBOX => 'https://stageapi.trendyol.com/seller-products',
     ];
 
     /**
@@ -236,7 +236,9 @@ class WR_Trendyol_API_Client {
 
         $response = $this->request( 'GET', $path );
 
-        error_log( 'WR TRENDYOL DEBUG: CATEGORY URL => ' . $path );
+        $category_url = $this->get_base_url() . ltrim( $path, '/' );
+
+        error_log( 'WR TRENDYOL DEBUG: CATEGORY URL => ' . $category_url );
 
         error_log( 'WR TRENDYOL DEBUG: CATEGORY RAW RESPONSE => ' . print_r( $response, true ) );
 
