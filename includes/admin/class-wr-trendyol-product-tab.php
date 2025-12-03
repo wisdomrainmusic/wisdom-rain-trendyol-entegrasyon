@@ -97,6 +97,18 @@ class WR_Trendyol_Product_Tab {
      * Tab içeriği.
      */
     public function render_product_panel() {
+
+        // KATEGORİLERİ OTOMATİK ÇEK.
+        $client     = $this->plugin->get_api_client();
+        $categories = $client->get_categories();
+
+        if ( is_wp_error( $categories ) ) {
+            error_log( 'WR TRENDYOL DEBUG: AUTO FETCH FAILED => ' . $categories->get_error_message() );
+        } else {
+            error_log( 'WR TRENDYOL DEBUG: AUTO FETCH SUCCESS, count=' . count( $categories ) );
+        }
+
+        // Devam eden orijinal kod:
         global $post;
 
         $product_id = $post->ID;
