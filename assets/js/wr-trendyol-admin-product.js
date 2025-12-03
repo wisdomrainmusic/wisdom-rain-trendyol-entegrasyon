@@ -1,66 +1,62 @@
 jQuery(function($) {
 
-    // Kategori değiştiğinde attribute'ları yeniden yükle
-    $('#wr_trendyol_category_id').on('change', function() {
-        var categoryId = $(this).find(':selected').val() || $(this).val();
-        var productId  = $('#post_ID').val();
+    console.log("WR TRENDYOL ADMIN JS ACTIVE");
 
-        if (!categoryId) {
-            $('#wr_trendyol_attributes_wrap').html('<p>Kategori seçilmedi.</p>');
+    const catSelect = $('#wr_trendyol_category_id');
+    const loadBtn   = $('#wr_trendyol_load_attributes_btn');
+    const wrapper   = $('#wr_trendyol_attributes_wrap');
+
+    /**
+     * Load attributes via AJAX
+     */
+    function loadAttributes() {
+
+        const category_id = catSelect.val();
+        const product_id  = $('#post_ID').val();
+
+        if (!category_id) {
+            wrapper.html('<p>Kategori seçilmedi.</p>');
             return;
         }
 
-        $('#wr_trendyol_attributes_wrap').html('<p>Yükleniyor…</p>');
+        wrapper.html('<p>Yükleniyor...</p>');
 
-        $.post(
-            WRTrendyolProduct.ajax_url,
-            {
+        $.ajax({
+            url: WRTrendyolProduct.ajax_url,
+            type: 'POST',
+            dataType: 'json',
+            data: {
                 action: 'wr_trendyol_load_attributes',
                 nonce: WRTrendyolProduct.nonce,
-                category_id: categoryId,
-                product_id: productId
+                product_id: product_id,
+                category_id: category_id
             },
-            function(response) {
-                if (response && response.success && response.data && response.data.html) {
-                    $('#wr_trendyol_attributes_wrap').html(response.data.html);
+            success: function(response) {
+                if (response.success) {
+                    wrapper.html(response.data.html);
                 } else {
-                    $('#wr_trendyol_attributes_wrap').html('<p>Attribute yüklenemedi.</p>');
+                    wrapper.html('<p>Attribute yüklenirken hata oluştu.</p>');
                 }
+            },
+            error: function(xhr) {
+                console.log("WR TRENDYOL AJAX ERROR:", xhr.responseText);
+                wrapper.html('<p>Sunucu hatası.</p>');
             }
-        );
+        });
+    }
+
+    /**
+     * Select2 support — change çalışmadığı için select2:select event’i kullanıyoruz
+     */
+    catSelect.on('select2:select', function () {
+        loadAttributes();
     });
 
-    // Ürünü Trendyol'a gönder
-    $('#wr_trendyol_push_product_btn').on('click', function(e) {
-        e.preventDefault();
-
-        var productId = $(this).data('product-id');
-        var $result   = $('#wr_trendyol_push_result');
-
-        if (!productId) {
-            return;
-        }
-
-        $result.text('Gönderiliyor…');
-
-        $.post(
-            WRTrendyolProduct.ajax_url,
-            {
-                action: 'wr_trendyol_push_product',
-                nonce: WRTrendyolProduct.nonce,
-                product_id: productId
-            },
-            function(response) {
-                if (response && response.success) {
-                    $result.text(WRTrendyolProduct.push_success_msg);
-                } else {
-                    var msg = WRTrendyolProduct.push_error_msg;
-                    if (response && response.data && response.data.message) {
-                        msg = response.data.message;
-                    }
-                    $result.text(msg);
-                }
-            }
-        );
+    /**
+     * Manual load button → same function
+     */
+    loadBtn.on('click', function () {
+        loadAttributes();
     });
+
 });
