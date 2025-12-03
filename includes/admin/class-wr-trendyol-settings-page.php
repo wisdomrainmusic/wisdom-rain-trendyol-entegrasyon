@@ -23,7 +23,8 @@ class WR_Trendyol_Settings_Page {
     public function __construct( WR_Trendyol_Plugin $plugin ) {
         $this->plugin = $plugin;
 
-        add_action( 'admin_menu', [ $this, 'add_menu' ] );
+        // WooCommerce menüsünün tamamen yüklenmesini beklemek için priority yükseltildi
+        add_action( 'admin_menu', [ $this, 'add_menu' ], 200 );
         add_action( 'admin_init', [ $this, 'register_settings' ] );
         add_action( 'admin_post_wr_trendyol_test_connection', [ $this, 'handle_health_check' ] );
         add_action( 'admin_notices', [ $this, 'render_notices' ] );
@@ -33,8 +34,17 @@ class WR_Trendyol_Settings_Page {
      * Add settings page under WooCommerce.
      */
     public function add_menu() {
+        // WooCommerce yüklenmemişse menü ekleme
+        if ( ! function_exists( 'WC' ) ) {
+            return;
+        }
+
+        // WooCommerce admin menü slug'ı
+        $parent_slug = 'woocommerce';
+
+        // Trendyol ayar menüsünü WooCommerce altına ekle
         add_submenu_page(
-            'woocommerce',
+            $parent_slug,
             __( 'Trendyol Entegrasyon', 'wisdom-rain-trendyol-entegrasyon' ),
             __( 'Trendyol Entegrasyon', 'wisdom-rain-trendyol-entegrasyon' ),
             'manage_woocommerce',
