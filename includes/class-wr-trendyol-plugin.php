@@ -69,6 +69,7 @@ class WR_Trendyol_Plugin {
 
         if ( is_admin() ) {
             new Admin\WR_Trendyol_Settings_Page( $this );
+            new Admin\WR_Trendyol_Product_Tab( $this );
         }
     }
 

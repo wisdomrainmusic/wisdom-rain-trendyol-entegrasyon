@@ -216,6 +216,76 @@ class WR_Trendyol_API_Client {
     }
 
     /**
+     * Trendyol kategori listesini çeker (transient cache ile)
+     *
+     * @return array|WP_Error
+     */
+    public function get_categories() {
+
+        $cached = get_transient( 'wr_trendyol_categories' );
+        if ( $cached !== false ) {
+            return $cached;
+        }
+
+        $response = $this->request( 'GET', '/product-categories' );
+
+        if ( is_wp_error( $response ) ) {
+            return $response;
+        }
+
+        $body = isset( $response['body'] ) ? $response['body'] : array();
+        $categories = isset( $body['categories'] ) ? $body['categories'] : $body;
+
+        if ( ! is_array( $categories ) ) {
+            $categories = array();
+        }
+
+        set_transient( 'wr_trendyol_categories', $categories, WEEK_IN_SECONDS );
+
+        return $categories;
+    }
+
+    /**
+     * Belirli bir kategori için attribute listesi
+     *
+     * @param int $category_id
+     *
+     * @return array|WP_Error
+     */
+    public function get_category_attributes( $category_id ) {
+
+        $category_id = absint( $category_id );
+        if ( ! $category_id ) {
+            return $this->wrap_error( 'invalid_category', 'Geçersiz kategori ID.' );
+        }
+
+        $cache_key = 'wr_trendyol_cat_attrs_' . $category_id;
+        $cached    = get_transient( $cache_key );
+
+        if ( $cached !== false ) {
+            return $cached;
+        }
+
+        $path = sprintf( '/product-categories/%d/attributes', $category_id );
+        $response = $this->request( 'GET', $path );
+
+        if ( is_wp_error( $response ) ) {
+            return $response;
+        }
+
+        $body   = isset( $response['body'] ) ? $response['body'] : array();
+        $attrs  = isset( $body['attributes'] ) ? $body['attributes'] : $body;
+
+        if ( ! is_array( $attrs ) ) {
+            $attrs = array();
+        }
+
+        set_transient( $cache_key, $attrs, HOUR_IN_SECONDS );
+
+        return $attrs;
+    }
+
+    /**
      * Whether debug mode is enabled.
      *
      * @return bool
