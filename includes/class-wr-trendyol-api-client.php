@@ -138,7 +138,9 @@ class WR_Trendyol_API_Client {
             return new WP_Error( 'wr_trendyol_missing_credentials', __( 'API key ve secret değerleri gerekli.', 'wisdom-rain-trendyol-entegrasyon' ) );
         }
 
-        $url = $this->get_base_url() . ltrim( $path, '/' );
+        $is_absolute_url = (bool) parse_url( $path, PHP_URL_SCHEME );
+
+        $url = $is_absolute_url ? $path : $this->get_base_url() . ltrim( $path, '/' );
 
         if ( ! empty( $args['query'] ) && is_array( $args['query'] ) ) {
             $url = add_query_arg( $args['query'], $url );
@@ -229,16 +231,16 @@ class WR_Trendyol_API_Client {
 
         error_log( 'WR TRENDYOL DEBUG: CATEGORY REQUEST START' );
 
-        // NEW OFFICIAL ENDPOINT:
-        // /v1/{sellerId}/product-categories
+        // NEW OFFICIAL ENDPOINT (apigw):
+        // /integration/product/product-categories
 
-        $path = sprintf( '/v1/%s/product-categories', $this->seller_id );
+        $path = 'https://apigw.trendyol.com/integration/product/product-categories';
 
         $response = $this->request( 'GET', $path );
 
-        $category_url = $this->get_base_url() . ltrim( $path, '/' );
+        $category_url = $path;
 
-        error_log( 'WR TRENDYOL DEBUG: CATEGORY URL => ' . $category_url );
+        error_log( 'WR TRENDYOL DEBUG: CATEGORY URL (FIXED: apigw.trendyol.com) => ' . $category_url );
 
         error_log( 'WR TRENDYOL DEBUG: CATEGORY RAW RESPONSE => ' . print_r( $response, true ) );
 
@@ -281,9 +283,9 @@ class WR_Trendyol_API_Client {
         }
 
         // NEW OFFICIAL ENDPOINT:
-        // /v1/{sellerId}/product-categories/{categoryId}/attributes
+        // /integration/product/product-categories/{categoryId}/attributes
 
-        $path = sprintf( '/v1/%s/product-categories/%d/attributes', $this->seller_id, $category_id );
+        $path = sprintf( 'https://apigw.trendyol.com/integration/product/product-categories/%d/attributes', $category_id );
         $response = $this->request( 'GET', $path );
 
         if ( is_wp_error( $response ) ) {
