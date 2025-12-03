@@ -108,8 +108,7 @@ class WR_Trendyol_Product_Tab {
         $enabled            = 'yes' === get_post_meta( $product_id, '_wr_trendyol_enabled', true );
         $product_tid        = get_post_meta( $product_id, '_wr_trendyol_product_id', true );
 
-        $client     = $this->plugin->get_api_client();
-        $categories = $client->get_categories();
+        $category_options = function_exists( 'wr_trendyol_get_category_options' ) ? wr_trendyol_get_category_options() : [];
 
         ?>
         <div id="wr_trendyol_product_data" class="panel woocommerce_options_panel">
@@ -117,27 +116,13 @@ class WR_Trendyol_Product_Tab {
                 <p class="form-field">
                     <label for="wr_trendyol_category_id"><?php _e( 'Trendyol Category', 'wisdom-rain-trendyol-entegrasyon' ); ?></label>
                     <select id="wr_trendyol_category_id" name="wr_trendyol_category_id" class="wc-enhanced-select">
-                        <option value=""><?php _e( 'Kategori seçin…', 'wisdom-rain-trendyol-entegrasyon' ); ?></option>
-                        <?php
-                        if ( is_array( $categories ) ) {
-                            foreach ( $categories as $cat ) {
-                                $id   = isset( $cat['id'] ) ? $cat['id'] : 0;
-                                $name = isset( $cat['name'] ) ? $cat['name'] : '';
-                                if ( ! $id || ! $name ) {
-                                    continue;
-                                }
-                                printf(
-                                    '<option value="%d"%s>%s</option>',
-                                    (int) $id,
-                                    selected( (int) $category_id, (int) $id, false ),
-                                    esc_html( $name )
-                                );
-                            }
-                        }
-                        ?>
+                        <option value=""><?php _e( '— Select Trendyol Category —', 'wisdom-rain-trendyol-entegrasyon' ); ?></option>
+                        <?php foreach ( $category_options as $cat_id => $label ) : ?>
+                            <option value="<?php echo esc_attr( $cat_id ); ?>" <?php selected( (string) $category_id, (string) $cat_id ); ?>><?php echo esc_html( $label ); ?></option>
+                        <?php endforeach; ?>
                     </select>
                     <span class="description">
-                        <?php _e( "Ürünün Trendyol kategori ID'si.", 'wisdom-rain-trendyol-entegrasyon' ); ?>
+                        <?php _e( 'Trendyol category selection for this product.', 'wisdom-rain-trendyol-entegrasyon' ); ?>
                     </span>
                 </p>
 
@@ -245,6 +230,8 @@ class WR_Trendyol_Product_Tab {
      * @param int $category_id Trendyol category ID.
      */
     protected function render_attributes_fields_static( $product_id, $category_id ) {
+        $category_id = (int) $category_id;
+
         if ( ! $category_id ) {
             echo '<p>' . esc_html__( 'Henüz kategori seçilmedi.', 'wisdom-rain-trendyol-entegrasyon' ) . '</p>';
             return;
@@ -330,7 +317,7 @@ class WR_Trendyol_Product_Tab {
      * @param object $post       WP_Post instance.
      */
     public function save_product_meta( $product_id, $post ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
-        $category_id        = isset( $_POST['wr_trendyol_category_id'] ) ? absint( $_POST['wr_trendyol_category_id'] ) : 0;
+        $category_id        = isset( $_POST['wr_trendyol_category_id'] ) ? sanitize_text_field( wp_unslash( $_POST['wr_trendyol_category_id'] ) ) : '';
         $brand_id           = isset( $_POST['wr_trendyol_brand_id'] ) ? sanitize_text_field( wp_unslash( $_POST['wr_trendyol_brand_id'] ) ) : '';
         $barcode            = isset( $_POST['wr_trendyol_barcode'] ) ? sanitize_text_field( wp_unslash( $_POST['wr_trendyol_barcode'] ) ) : '';
         $dimensional_weight = isset( $_POST['wr_trendyol_dimensional_weight'] ) ? wc_format_decimal( wp_unslash( $_POST['wr_trendyol_dimensional_weight'] ) ) : '';

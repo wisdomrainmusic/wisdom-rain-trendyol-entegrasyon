@@ -23,6 +23,10 @@ if ( ! defined( 'WR_TRENDYOL_PLUGIN_PATH' ) ) {
     define( 'WR_TRENDYOL_PLUGIN_PATH', plugin_dir_path( __FILE__ ) );
 }
 
+if ( ! defined( 'WR_TRENDYOL_PLUGIN_DIR' ) ) {
+    define( 'WR_TRENDYOL_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
+}
+
 if ( ! defined( 'WR_TRENDYOL_PLUGIN_URL' ) ) {
     define( 'WR_TRENDYOL_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 }
@@ -48,6 +52,10 @@ spl_autoload_register( function ( $class ) {
         require_once $filepath;
     }
 } );
+
+if ( is_admin() ) {
+    require_once WR_TRENDYOL_PLUGIN_PATH . 'includes/admin/class-wr-trendyol-categories.php';
+}
 
 // Custom Trendyol category manager module loader.
 require_once __DIR__ . '/wrti-plugin.php';

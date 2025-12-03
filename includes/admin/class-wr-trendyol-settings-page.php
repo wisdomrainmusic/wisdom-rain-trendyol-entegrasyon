@@ -58,6 +58,16 @@ class WR_Trendyol_Settings_Page {
      */
     public function register_settings() {
         register_setting( 'wr_trendyol_settings_group', WR_Trendyol_Plugin::OPTION_KEY, [ $this, 'sanitize_settings' ] );
+
+        register_setting(
+            'wr_trendyol_settings_group',
+            'wr_trendyol_category_id',
+            [
+                'type'              => 'string',
+                'sanitize_callback' => 'sanitize_text_field',
+                'default'           => '',
+            ]
+        );
     }
 
     /**
