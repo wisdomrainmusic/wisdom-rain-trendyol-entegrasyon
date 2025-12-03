@@ -2,7 +2,7 @@ jQuery(document).ready(function($){
 
     $('#wr_load_attributes_btn').on('click', function(){
 
-        let category_id = $('#wr_trendyol_category').val();
+        let category_id = $('#wr_trendyol_category_id').val() || $('#wr_trendyol_category_select').val() || $('#wr_trendyol_category').val();
 
         if (!category_id) {
             alert("Kategori seçiniz.");
