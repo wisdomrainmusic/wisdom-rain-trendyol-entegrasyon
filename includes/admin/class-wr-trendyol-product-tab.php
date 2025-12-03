@@ -258,10 +258,12 @@ class WR_Trendyol_Product_Tab {
         }
 
         foreach ( $attrs as $attr ) {
-            $attr_id  = isset( $attr['id'] ) ? (int) $attr['id'] : 0;
-            $name     = isset( $attr['name'] ) ? $attr['name'] : '';
-            $required = ! empty( $attr['required'] ) || ! empty( $attr['mandatory'] );
-            $values   = isset( $attr['values'] ) ? $attr['values'] : [];
+            $attr_id      = isset( $attr['attributeId'] ) ? (int) $attr['attributeId'] : ( isset( $attr['id'] ) ? (int) $attr['id'] : 0 );
+            $name         = isset( $attr['attributeName'] ) ? $attr['attributeName'] : ( isset( $attr['name'] ) ? $attr['name'] : '' );
+            $required     = ! empty( $attr['required'] ) || ! empty( $attr['mandatory'] );
+            $values       = isset( $attr['attributeValues'] ) ? $attr['attributeValues'] : ( isset( $attr['values'] ) ? $attr['values'] : [] );
+            $multiple     = ! empty( $attr['multipleValues'] );
+            $allow_custom = ! empty( $attr['customValue'] ) || ! empty( $attr['allowCustom'] );
 
             if ( ! $attr_id || ! $name ) {
                 continue;
@@ -269,11 +271,11 @@ class WR_Trendyol_Product_Tab {
 
             $meta_key      = '_wr_trendyol_attr_' . $attr_id;
             $stored        = get_post_meta( $product_id, $meta_key, true );
-            $stored_id     = '';
+            $stored_id     = [];
             $stored_custom = '';
 
             if ( is_array( $stored ) ) {
-                $stored_id     = isset( $stored['value_id'] ) ? $stored['value_id'] : '';
+                $stored_id     = isset( $stored['value_id'] ) ? (array) $stored['value_id'] : [];
                 $stored_custom = isset( $stored['custom'] ) ? $stored['custom'] : '';
             }
 
@@ -285,37 +287,48 @@ class WR_Trendyol_Product_Tab {
             echo '</label>';
 
             if ( ! empty( $values ) && is_array( $values ) ) {
-                // Değer listesi varsa: select + custom text
-                echo '<select name="wr_trendyol_attr[' . esc_attr( $attr_id ) . '][value_id]" class="wc-enhanced-select" style="max-width:260px;">';
+
+                // MULTIPLE SELECT destekle
+                $multiple_attr = $multiple ? ' multiple="multiple"' : '';
+
+                echo '<select name="wr_trendyol_attr[' . esc_attr( $attr_id ) . '][value_id][]" 
+                             class="wc-enhanced-select" style="max-width:260px;"' . $multiple_attr . '>';
+
                 echo '<option value="">' . esc_html__( 'Seçin…', 'wisdom-rain-trendyol-entegrasyon' ) . '</option>';
+
                 foreach ( $values as $val ) {
-                    $vid   = isset( $val['id'] ) ? $val['id'] : 0;
-                    $vname = isset( $val['name'] ) ? $val['name'] : '';
-                    if ( ! $vid || ! $vname ) {
-                        continue;
-                    }
+                    $vid   = isset( $val['attributeValueId'] ) ? $val['attributeValueId'] : ( isset( $val['id'] ) ? $val['id'] : 0 );
+                    $vname = isset( $val['attributeValue'] ) ? $val['attributeValue'] : ( isset( $val['name'] ) ? $val['name'] : '' );
+                    if ( ! $vid ) continue;
+
+                    $selected = selected( true, in_array( (int) $vid, array_map( 'intval', $stored_id ), true ), false );
+
                     printf(
                         '<option value="%d"%s>%s</option>',
                         (int) $vid,
-                        selected( (int) $stored_id, (int) $vid, false ),
+                        $selected,
                         esc_html( $vname )
                     );
                 }
                 echo '</select>';
 
-                echo '<br/><span class="description">' . esc_html__( 'Gerekirse özel bir değer girin:', 'wisdom-rain-trendyol-entegrasyon' ) . '</span><br/>';
-                printf(
-                    '<input type="text" name="wr_trendyol_attr[%d][custom]" value="%s" style="max-width:260px;" />',
-                    (int) $attr_id,
-                    esc_attr( $stored_custom )
-                );
+                if ( $multiple ) {
+                    echo '<input type="hidden" name="wr_trendyol_attr[' . esc_attr( $attr_id ) . '][multiple]" value="1" />';
+                }
+
+                // Custom allowed ise:
+                if ( $allow_custom ) {
+                    echo '<br/><span class="description">Özel değer:</span><br/>';
+                    echo '<input type="text" name="wr_trendyol_attr[' . esc_attr( $attr_id ) . '][custom]" 
+                                  value="' . esc_attr( $stored_custom ) . '" style="max-width:260px;" />';
+                }
+
             } else {
-                // Değer listesi yoksa düz text
-                printf(
-                    '<input type="text" name="wr_trendyol_attr[%d][custom]" value="%s" style="max-width:260px;" />',
-                    (int) $attr_id,
-                    esc_attr( $stored_custom )
-                );
+
+                // Değer listesi yoksa tek input
+                echo '<input type="text" 
+                           name="wr_trendyol_attr[' . esc_attr( $attr_id ) . '][custom]" 
+                           value="' . esc_attr( $stored_custom ) . '" style="max-width:260px;" />';
             }
 
             echo '</p>';
@@ -347,19 +360,37 @@ class WR_Trendyol_Product_Tab {
                 if ( ! $attr_id ) {
                     continue;
                 }
-                $value_id = isset( $data['value_id'] ) ? absint( $data['value_id'] ) : 0;
-                $custom   = isset( $data['custom'] ) ? sanitize_text_field( wp_unslash( $data['custom'] ) ) : '';
+                $is_multiple = ! empty( $data['multiple'] );
+
+                $raw_value_ids = isset( $data['value_id'] ) ? $data['value_id'] : [];
+                $value_ids     = [];
+
+                if ( is_array( $raw_value_ids ) ) {
+                    foreach ( $raw_value_ids as $raw_value_id ) {
+                        $val = absint( $raw_value_id );
+                        if ( $val ) {
+                            $value_ids[] = $val;
+                        }
+                    }
+                } else {
+                    $single_id = absint( $raw_value_ids );
+                    if ( $single_id ) {
+                        $value_ids[] = $single_id;
+                    }
+                }
+
+                $custom = isset( $data['custom'] ) ? sanitize_text_field( wp_unslash( $data['custom'] ) ) : '';
 
                 $meta_key = '_wr_trendyol_attr_' . $attr_id;
 
-                if ( ! $value_id && '' === $custom ) {
+                if ( empty( $value_ids ) && '' === $custom ) {
                     delete_post_meta( $product_id, $meta_key );
                 } else {
                     update_post_meta(
                         $product_id,
                         $meta_key,
                         [
-                            'value_id' => $value_id,
+                            'value_id' => $is_multiple ? $value_ids : ( ( isset( $value_ids[0] ) ? $value_ids[0] : 0 ) ),
                             'custom'   => $custom,
                         ]
                     );
