@@ -63,9 +63,16 @@ require_once __DIR__ . '/includes/wrti-ajax-loader.php';
 require_once __DIR__ . '/wrti-plugin.php';
 
 add_action( 'save_post_product', function( $post_id ) {
-    if ( isset( $_POST['_wr_trendyol_category_id'] ) ) {
-        update_post_meta( $post_id, '_wr_trendyol_category_id', sanitize_text_field( wp_unslash( $_POST['_wr_trendyol_category_id'] ) ) );
+    if ( isset( $_POST['wr_trendyol_category'] ) ) {
+        $category = sanitize_text_field( wp_unslash( $_POST['wr_trendyol_category'] ) );
+    } elseif ( isset( $_POST['_wr_trendyol_category_id'] ) ) {
+        $category = sanitize_text_field( wp_unslash( $_POST['_wr_trendyol_category_id'] ) );
+    } else {
+        return;
     }
+
+    update_post_meta( $post_id, '_wr_trendyol_category_id', $category );
+    update_post_meta( $post_id, '_trendyol_category_id', $category );
 } );
 
 function wr_trendyol_bootstrap() {

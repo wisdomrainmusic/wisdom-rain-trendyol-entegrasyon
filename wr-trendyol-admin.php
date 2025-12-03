@@ -11,6 +11,14 @@ add_action('admin_enqueue_scripts', function () {
         true
     );
 
+    wp_enqueue_script(
+        'wr-trendyol-attribute-loader',
+        plugin_dir_url(__FILE__) . 'assets/js/attribute_yukle.js',
+        ['jquery'],
+        '1.0',
+        true
+    );
+
     wp_localize_script('wr-trendyol-admin', 'wrTrendyol', [
         'ajax_url' => admin_url('admin-ajax.php'),
         'nonce'    => wp_create_nonce('wr_trendyol_nonce')
