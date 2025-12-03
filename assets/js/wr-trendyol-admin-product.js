@@ -1,62 +1,48 @@
-jQuery(function($) {
+jQuery(function($){
 
-    console.log("WR TRENDYOL ADMIN JS ACTIVE");
+    console.log("WR TRENDYOL PRODUCT JS ACTIVE");
 
-    const catSelect = $('#wr_trendyol_category_id');
-    const loadBtn   = $('#wr_trendyol_load_attributes_btn');
-    const wrapper   = $('#wr_trendyol_attributes_wrap');
+    // Evrensel buton yakalama
+    $(document).on('click', '#wr-load-attributes, #wr_load_attributes, .wr-load-attributes, .wr-load-attr', function(e){
+        e.preventDefault();
 
-    /**
-     * Load attributes via AJAX
-     */
-    function loadAttributes() {
+        console.log("ATTR BUTTON CLICKED");
 
-        const category_id = catSelect.val();
-        const product_id  = $('#post_ID').val();
+        let categoryId = $('#wr_trendyol_category').val();
+        let productId  = $('#post_ID').val();
 
-        if (!category_id) {
-            wrapper.html('<p>Kategori seçilmedi.</p>');
+        if(!categoryId){
+            alert("Lütfen Trendyol kategorisi seçin");
             return;
         }
 
-        wrapper.html('<p>Yükleniyor...</p>');
-
         $.ajax({
-            url: WRTrendyolProduct.ajax_url,
-            type: 'POST',
-            dataType: 'json',
+            url: wrTrendyol.ajax_url,
+            type: "POST",
             data: {
-                action: 'wr_trendyol_load_attributes',
-                nonce: WRTrendyolProduct.nonce,
-                product_id: product_id,
-                category_id: category_id
+                action: "wr_load_attributes",
+                nonce: wrTrendyol.nonce,
+                category_id: categoryId,
+                product_id: productId
             },
-            success: function(response) {
-                if (response.success) {
-                    wrapper.html(response.data.html);
+            beforeSend: function(){
+                console.log("AJAX SENDING...");
+            },
+            success: function(res){
+                console.log("AJAX RESPONSE:", res);
+
+                if(res.success){
+                    alert("Özellikler başarıyla yüklendi!");
+                    location.reload();
                 } else {
-                    wrapper.html('<p>Attribute yüklenirken hata oluştu.</p>');
+                    alert("Hata: " + res.data.message);
                 }
             },
-            error: function(xhr) {
-                console.log("WR TRENDYOL AJAX ERROR:", xhr.responseText);
-                wrapper.html('<p>Sunucu hatası.</p>');
+            error: function(err){
+                console.error("AJAX ERROR:", err);
             }
         });
-    }
 
-    /**
-     * Select2 support — change çalışmadığı için select2:select event’i kullanıyoruz
-     */
-    catSelect.on('select2:select', function () {
-        loadAttributes();
-    });
-
-    /**
-     * Manual load button → same function
-     */
-    loadBtn.on('click', function () {
-        loadAttributes();
     });
 
 });
