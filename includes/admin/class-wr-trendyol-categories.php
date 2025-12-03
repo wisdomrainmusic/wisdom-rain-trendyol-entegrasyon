@@ -40,7 +40,17 @@ class WR_Trendyol_Categories {
 
         $options = array();
 
-        $items = isset( $raw['items'] ) && is_array( $raw['items'] ) ? $raw['items'] : $raw;
+        if ( isset( $raw['categories'] ) && is_array( $raw['categories'] ) ) {
+            $items = $raw['categories'];
+        } elseif ( isset( $raw['items'] ) && is_array( $raw['items'] ) ) {
+            // Eski format desteği
+            $items = $raw['items'];
+        } elseif ( is_array( $raw ) ) {
+            // Fallback: API direkt array dönerse
+            $items = $raw;
+        } else {
+            return array();
+        }
 
         foreach ( $items as $item ) {
             self::walk_category( $item, array(), $options );
