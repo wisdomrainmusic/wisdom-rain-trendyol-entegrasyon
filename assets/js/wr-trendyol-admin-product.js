@@ -2,7 +2,7 @@ jQuery(function($) {
 
     // Kategori değiştiğinde attribute'ları yeniden yükle
     $('#wr_trendyol_category_id').on('change', function() {
-        var categoryId = $(this).val();
+        var categoryId = $(this).find(':selected').val() || $(this).val();
         var productId  = $('#post_ID').val();
 
         if (!categoryId) {
