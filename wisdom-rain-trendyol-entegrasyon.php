@@ -55,6 +55,7 @@ spl_autoload_register( function ( $class ) {
 
 if ( is_admin() ) {
     require_once WR_TRENDYOL_PLUGIN_PATH . 'includes/admin/class-wr-trendyol-categories.php';
+    require_once WR_TRENDYOL_PLUGIN_PATH . 'wr-trendyol-admin.php';
 }
 
 // Custom Trendyol category manager module loader.

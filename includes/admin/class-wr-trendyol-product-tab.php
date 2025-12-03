@@ -212,11 +212,15 @@ class WR_Trendyol_Product_Tab {
                     </button>
                 </p>
 
-                <div id="wr_trendyol_attributes_wrap">
-                    <?php
-                    // Sayfa load edildiğinde mevcut attribute meta'larını göster (AJAX sonrası da aynı HTML kullanılacak)
-                    $this->render_attributes_fields_static( $product_id, $category_id );
-                    ?>
+                <div id="wr_trendyol_attributes_box" style="padding:10px; background:#fff; border:1px solid #ddd;">
+                    <?php echo esc_html__( 'Kategori seçin ve "Özellikleri Yükle" butonuna basın.', 'wisdom-rain-trendyol-entegrasyon' ); ?>
+
+                    <div id="wr_trendyol_attributes_wrap">
+                        <?php
+                        // Sayfa load edildiğinde mevcut attribute meta'larını göster (AJAX sonrası da aynı HTML kullanılacak)
+                        $this->render_attributes_fields_static( $product_id, $category_id );
+                        ?>
+                    </div>
                 </div>
             </div>
 
