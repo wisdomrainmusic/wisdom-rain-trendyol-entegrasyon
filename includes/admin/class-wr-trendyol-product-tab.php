@@ -45,14 +45,18 @@ class WR_Trendyol_Product_Tab {
      * @param string $hook Current admin page hook.
      */
     public function enqueue_admin_assets( $hook ) {
-        if ( ! in_array( $hook, [ 'post.php', 'post-new.php' ], true ) ) {
+        $screen = get_current_screen();
+
+        if ( empty( $screen ) ) {
             return;
         }
 
-        $screen = get_current_screen();
-        if ( empty( $screen->post_type ) || 'product' !== $screen->post_type ) {
+        // Product edit screen değilse çık
+        if ( $screen->post_type !== 'product' ) {
             return;
         }
+
+        // Not: WPBakery / Divi / block-editor fark etmeden JS burada yüklenir
 
         wp_enqueue_script(
             'wr-trendyol-admin-product',
