@@ -49,6 +49,9 @@ spl_autoload_register( function ( $class ) {
     }
 } );
 
+// Custom Trendyol category manager module loader.
+require_once __DIR__ . '/wrti-plugin.php';
+
 function wr_trendyol_bootstrap() {
     if ( ! class_exists( 'WooCommerce' ) ) {
         add_action( 'admin_notices', function () {
