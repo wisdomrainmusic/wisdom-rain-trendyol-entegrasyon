@@ -58,6 +58,7 @@ if ( is_admin() ) {
 }
 
 // Custom Trendyol category manager module loader.
+require_once __DIR__ . '/includes/wrti-ajax-loader.php';
 require_once __DIR__ . '/wrti-plugin.php';
 
 function wr_trendyol_bootstrap() {
