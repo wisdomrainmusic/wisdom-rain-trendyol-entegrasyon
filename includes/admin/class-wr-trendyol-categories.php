@@ -105,3 +105,87 @@ if ( ! function_exists( 'wr_trendyol_get_category_options' ) ) {
         return WR_Trendyol_Categories::get_flat_options();
     }
 }
+
+/**
+ * Trendyol Category Dropdown (FULL FIXED VERSION)
+ * Outputs: <option value="categoryId">Parent > Child > SubChild</option>
+ */
+function wr_trendyol_render_category_dropdown( $post ) {
+
+    // Ürüne daha önce seçilmiş kategori var mı?
+    $selected_id = get_post_meta( $post->ID, '_trendyol_category_id', true );
+
+    if ( ! $selected_id ) {
+        $selected_id = get_post_meta( $post->ID, '_wr_trendyol_category_id', true );
+    }
+
+    // Kategori ağacını alıyoruz (JSON → array)
+    $categories = get_option( 'wr_trendyol_category_tree' );
+
+    if ( ( ! $categories || ! is_array( $categories ) ) && function_exists( 'wr_trendyol_get_category_options' ) ) {
+        $legacy_tree = get_option( 'wrti_category_tree' );
+        if ( $legacy_tree ) {
+            $decoded = json_decode( $legacy_tree, true );
+            if ( is_array( $decoded ) ) {
+                $categories = isset( $decoded['categories'] ) ? $decoded['categories'] : $decoded;
+            }
+        }
+    }
+
+    if ( ! $categories || ! is_array( $categories ) ) {
+        echo '<p style="color:red;">Kategori listesi yüklenemedi.</p>';
+        return;
+    }
+
+    echo '<select id="wr_trendyol_category" name="wr_trendyol_category" style="width:100%;">';
+    echo '<option value="">— Select Trendyol Category —</option>';
+
+    // Recursive builder
+    wr_trendyol_render_options_recursive( $categories, '', $selected_id );
+
+    echo '</select>';
+}
+
+/**
+ * Recursive option builder
+ */
+function wr_trendyol_render_options_recursive( $items, $prefix, $selected_id ) {
+
+    foreach ( $items as $item ) {
+
+        $id   = isset( $item['id'] ) ? $item['id'] : '';
+        $name = isset( $item['name'] ) ? $item['name'] : '';
+
+        if ( ! $id ) {
+            continue;
+        }
+
+        // Option label (path)
+        $label = $prefix ? $prefix . ' > ' . $name : $name;
+
+        // Selected?
+        $sel = ( (string) $selected_id === (string) $id ) ? 'selected' : '';
+
+        echo '<option value="' . esc_attr( $id ) . '" ' . $sel . '>' . esc_html( $label ) . '</option>';
+
+        // If children exist → recursion
+        if ( isset( $item['subCategories'] ) && is_array( $item['subCategories'] ) && count( $item['subCategories'] ) > 0 ) {
+            wr_trendyol_render_options_recursive( $item['subCategories'], $label, $selected_id );
+        }
+    }
+}
+
+add_action(
+    'save_post',
+    function ( $post_id ) {
+
+        if ( ! isset( $_POST['wr_trendyol_category'] ) ) {
+            return;
+        }
+
+        $cat_id = sanitize_text_field( wp_unslash( $_POST['wr_trendyol_category'] ) );
+
+        update_post_meta( $post_id, '_trendyol_category_id', $cat_id );
+        update_post_meta( $post_id, '_wr_trendyol_category_id', $cat_id );
+    }
+);

@@ -117,26 +117,26 @@ class WR_Trendyol_Product_Tab {
 
         $product_id = $post->ID;
 
-        $category_id        = get_post_meta( $product_id, '_wr_trendyol_category_id', true );
+        $category_id        = get_post_meta( $product_id, '_trendyol_category_id', true );
+        if ( ! $category_id ) {
+            $category_id = get_post_meta( $product_id, '_wr_trendyol_category_id', true );
+        }
         $brand_id           = get_post_meta( $product_id, '_wr_trendyol_brand_id', true );
         $barcode            = get_post_meta( $product_id, '_wr_trendyol_barcode', true );
         $dimensional_weight = get_post_meta( $product_id, '_wr_trendyol_dimensional_weight', true );
         $enabled            = 'yes' === get_post_meta( $product_id, '_wr_trendyol_enabled', true );
         $product_tid        = get_post_meta( $product_id, '_wr_trendyol_product_id', true );
 
-        $category_options = function_exists( 'wr_trendyol_get_category_options' ) ? wr_trendyol_get_category_options() : [];
-
         ?>
         <div id="wr_trendyol_product_data" class="panel woocommerce_options_panel">
             <div class="options_group">
                 <p class="form-field">
-                    <label for="wr_trendyol_category_id"><?php _e( 'Trendyol Category', 'wisdom-rain-trendyol-entegrasyon' ); ?></label>
-                    <select id="wr_trendyol_category_id" name="wr_trendyol_category_id" class="wc-enhanced-select">
-                        <option value=""><?php _e( '— Select Trendyol Category —', 'wisdom-rain-trendyol-entegrasyon' ); ?></option>
-                        <?php foreach ( $category_options as $cat_id => $label ) : ?>
-                            <option value="<?php echo esc_attr( $cat_id ); ?>" <?php selected( (string) $category_id, (string) $cat_id ); ?>><?php echo esc_html( $label ); ?></option>
-                        <?php endforeach; ?>
-                    </select>
+                    <label for="wr_trendyol_category"><?php _e( 'Trendyol Category', 'wisdom-rain-trendyol-entegrasyon' ); ?></label>
+                    <?php
+                    if ( function_exists( '\\wr_trendyol_render_category_dropdown' ) ) {
+                        \wr_trendyol_render_category_dropdown( $post );
+                    }
+                    ?>
                     <input type="hidden" id="_wr_trendyol_category_id" name="_wr_trendyol_category_id" value="<?php echo esc_attr( $category_id ); ?>" />
                     <span class="description">
                         <?php _e( 'Trendyol category selection for this product.', 'wisdom-rain-trendyol-entegrasyon' ); ?>
@@ -355,13 +355,17 @@ class WR_Trendyol_Product_Tab {
      * @param object $post       WP_Post instance.
      */
     public function save_product_meta( $product_id, $post ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
-        $category_id        = isset( $_POST['wr_trendyol_category_id'] ) ? sanitize_text_field( wp_unslash( $_POST['wr_trendyol_category_id'] ) ) : '';
+        $category_id        = isset( $_POST['wr_trendyol_category'] ) ? sanitize_text_field( wp_unslash( $_POST['wr_trendyol_category'] ) ) : '';
+        if ( ! $category_id && isset( $_POST['wr_trendyol_category_id'] ) ) {
+            $category_id = sanitize_text_field( wp_unslash( $_POST['wr_trendyol_category_id'] ) );
+        }
         $brand_id           = isset( $_POST['wr_trendyol_brand_id'] ) ? sanitize_text_field( wp_unslash( $_POST['wr_trendyol_brand_id'] ) ) : '';
         $barcode            = isset( $_POST['wr_trendyol_barcode'] ) ? sanitize_text_field( wp_unslash( $_POST['wr_trendyol_barcode'] ) ) : '';
         $dimensional_weight = isset( $_POST['wr_trendyol_dimensional_weight'] ) ? wc_format_decimal( wp_unslash( $_POST['wr_trendyol_dimensional_weight'] ) ) : '';
         $enabled            = ( isset( $_POST['wr_trendyol_enabled'] ) && 'yes' === $_POST['wr_trendyol_enabled'] ) ? 'yes' : 'no';
 
         update_post_meta( $product_id, '_wr_trendyol_category_id', $category_id );
+        update_post_meta( $product_id, '_trendyol_category_id', $category_id );
         update_post_meta( $product_id, '_wr_trendyol_brand_id', $brand_id );
         update_post_meta( $product_id, '_wr_trendyol_barcode', $barcode );
         update_post_meta( $product_id, '_wr_trendyol_dimensional_weight', $dimensional_weight );

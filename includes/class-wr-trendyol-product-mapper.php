@@ -31,7 +31,10 @@ class WR_Trendyol_Product_Mapper {
             return new WP_Error( 'wr_trendyol_no_product', 'Ürün bulunamadı.' );
         }
 
-        $category_id        = (int) get_post_meta( $product_id, '_wr_trendyol_category_id', true );
+        $category_id        = (int) get_post_meta( $product_id, '_trendyol_category_id', true );
+        if ( ! $category_id ) {
+            $category_id = (int) get_post_meta( $product_id, '_wr_trendyol_category_id', true );
+        }
         $brand_id           = (int) get_post_meta( $product_id, '_wr_trendyol_brand_id', true );
         $barcode            = (string) get_post_meta( $product_id, '_wr_trendyol_barcode', true );
         $dimensional_weight = get_post_meta( $product_id, '_wr_trendyol_dimensional_weight', true );

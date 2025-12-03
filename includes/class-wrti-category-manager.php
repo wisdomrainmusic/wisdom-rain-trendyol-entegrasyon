@@ -41,7 +41,12 @@ class WRTI_Category_Manager {
             return new WP_Error("empty_response", "API boş veri döndürdü.");
         }
 
+        $decoded = json_decode($body, true);
+
         update_option(self::$option_key, $body);
+        if (is_array($decoded)) {
+            update_option('wr_trendyol_category_tree', isset($decoded['categories']) ? $decoded['categories'] : $decoded);
+        }
         error_log("WR TRENDYOL DEBUG: CATEGORY JSON SAVED => LENGTH: " . strlen($body));
 
         return true;
