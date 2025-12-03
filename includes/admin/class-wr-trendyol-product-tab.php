@@ -137,6 +137,7 @@ class WR_Trendyol_Product_Tab {
                             <option value="<?php echo esc_attr( $cat_id ); ?>" <?php selected( (string) $category_id, (string) $cat_id ); ?>><?php echo esc_html( $label ); ?></option>
                         <?php endforeach; ?>
                     </select>
+                    <input type="hidden" id="_wr_trendyol_category_id" name="_wr_trendyol_category_id" value="<?php echo esc_attr( $category_id ); ?>" />
                     <span class="description">
                         <?php _e( 'Trendyol category selection for this product.', 'wisdom-rain-trendyol-entegrasyon' ); ?>
                     </span>
