@@ -245,7 +245,7 @@ class WR_Trendyol_Product_Tab {
      * @param int $product_id  Product ID.
      * @param int $category_id Trendyol category ID.
      */
-    protected function render_attributes_fields_static( $product_id, $category_id ) {
+    protected function render_attributes_fields_static( $product_id, $category_id, $preloaded_attrs = null ) {
         $category_id = (int) $category_id;
 
         if ( ! $category_id ) {
@@ -253,9 +253,13 @@ class WR_Trendyol_Product_Tab {
             return;
         }
 
-        $client = $this->plugin->get_api_client();
+        $attrs = is_array( $preloaded_attrs ) ? $preloaded_attrs : null;
 
-        $attrs = $client->get_category_attributes( $category_id );
+        if ( null === $attrs ) {
+            $client = $this->plugin->get_api_client();
+            $attrs  = $client->get_category_attributes( $category_id );
+        }
+
         if ( is_wp_error( $attrs ) || empty( $attrs ) ) {
             echo '<p>' . esc_html__( 'Bu kategori için attribute bilgisi alınamadı.', 'wisdom-rain-trendyol-entegrasyon' ) . '</p>';
             return;
@@ -416,8 +420,19 @@ class WR_Trendyol_Product_Tab {
         $product_id  = isset( $_POST['product_id'] ) ? absint( $_POST['product_id'] ) : 0;
         $category_id = isset( $_POST['category_id'] ) ? absint( $_POST['category_id'] ) : 0;
 
+        if ( ! $category_id ) {
+            wp_send_json_error( [ 'message' => __( 'Geçersiz kategori.', 'wisdom-rain-trendyol-entegrasyon' ) ] );
+        }
+
+        $client = $this->plugin->get_api_client();
+        $attrs  = $client->get_category_attributes( $category_id );
+
+        if ( is_wp_error( $attrs ) || empty( $attrs ) ) {
+            wp_send_json_error( [ 'message' => __( 'Attribute bilgisi alınamadı.', 'wisdom-rain-trendyol-entegrasyon' ) ] );
+        }
+
         ob_start();
-        $this->render_attributes_fields_static( $product_id, $category_id );
+        $this->render_attributes_fields_static( $product_id, $category_id, $attrs );
         $html = ob_get_clean();
 
         wp_send_json_success(
