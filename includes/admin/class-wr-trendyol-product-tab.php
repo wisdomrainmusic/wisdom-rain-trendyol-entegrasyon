@@ -133,11 +133,8 @@ class WR_Trendyol_Product_Tab {
                 <p class="form-field">
                     <label for="wr_trendyol_category"><?php _e( 'Trendyol Category', 'wisdom-rain-trendyol-entegrasyon' ); ?></label>
                     <?php
-                    if ( function_exists( '\\wr_trendyol_render_category_dropdown' ) ) {
-                        \wr_trendyol_render_category_dropdown( $post );
-                    }
+                    $this->render_category_dropdown( $product_id );
                     ?>
-                    <input type="hidden" id="_wr_trendyol_category_id" name="_wr_trendyol_category_id" value="<?php echo esc_attr( $category_id ); ?>" />
                     <span class="description">
                         <?php _e( 'Trendyol category selection for this product.', 'wisdom-rain-trendyol-entegrasyon' ); ?>
                     </span>
@@ -245,6 +242,42 @@ class WR_Trendyol_Product_Tab {
     }
 
     /**
+     * Render Trendyol Category Dropdown (with data-category-id).
+     *
+     * @param int $post_id Product ID.
+     */
+    public function render_category_dropdown( $post_id ) {
+
+        $categories = get_option( 'wr_trendyol_categories', [] );
+        if ( empty( $categories ) ) {
+            echo '<span style="color:red;">Kategori listesi yüklenemedi.</span>';
+            return;
+        }
+
+        $selected = get_post_meta( $post_id, '_wr_trendyol_category_id', true );
+
+        echo '<select id="wr_trendyol_category_select" name="wr_trendyol_category_select" style="width:100%;">';
+        echo '<option value="">Kategori seçin...</option>';
+
+        foreach ( $categories as $cat ) {
+            $label = $cat['fullPath'];   // Örnek: Kadın > Giyim > Elbise.
+            $id    = $cat['id'];
+
+            printf(
+                '<option value="%1$s" data-category-id="%1$s" %3$s>%2$s (ID: %1$s)</option>',
+                esc_attr( $id ),
+                esc_html( $label ),
+                selected( $selected, $id, false )
+            );
+        }
+
+        echo '</select>';
+
+        // Seçilen ID'nin kaydedileceği alan.
+        echo '<input type="hidden" id="wr_trendyol_category_id" name="wr_trendyol_category_id" value="' . esc_attr( $selected ) . '">';
+    }
+
+    /**
      * Kategori attributes için statik render (mevcut kaydedilmiş değerler).
      *
      * @param int $product_id  Product ID.
@@ -349,23 +382,51 @@ class WR_Trendyol_Product_Tab {
     }
 
     /**
+     * Save selected Trendyol category meta.
+     *
+     * @param int $post_id Product ID.
+     *
+     * @return string Saved category ID.
+     */
+    public function save_category_meta( $post_id ) {
+        $category_id = '';
+
+        if ( isset( $_POST['wr_trendyol_category_id'] ) ) {
+            $category_id = sanitize_text_field( wp_unslash( $_POST['wr_trendyol_category_id'] ) );
+
+            update_post_meta(
+                $post_id,
+                '_wr_trendyol_category_id',
+                $category_id
+            );
+            update_post_meta(
+                $post_id,
+                '_trendyol_category_id',
+                $category_id
+            );
+        } elseif ( isset( $_POST['wr_trendyol_category'] ) ) { // Legacy fallback.
+            $category_id = sanitize_text_field( wp_unslash( $_POST['wr_trendyol_category'] ) );
+
+            update_post_meta( $post_id, '_wr_trendyol_category_id', $category_id );
+            update_post_meta( $post_id, '_trendyol_category_id', $category_id );
+        }
+
+        return $category_id;
+    }
+
+    /**
      * Meta kaydet.
      *
      * @param int    $product_id Product ID.
      * @param object $post       WP_Post instance.
      */
     public function save_product_meta( $product_id, $post ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
-        $category_id        = isset( $_POST['wr_trendyol_category'] ) ? sanitize_text_field( wp_unslash( $_POST['wr_trendyol_category'] ) ) : '';
-        if ( ! $category_id && isset( $_POST['wr_trendyol_category_id'] ) ) {
-            $category_id = sanitize_text_field( wp_unslash( $_POST['wr_trendyol_category_id'] ) );
-        }
+        $category_id        = $this->save_category_meta( $product_id );
         $brand_id           = isset( $_POST['wr_trendyol_brand_id'] ) ? sanitize_text_field( wp_unslash( $_POST['wr_trendyol_brand_id'] ) ) : '';
         $barcode            = isset( $_POST['wr_trendyol_barcode'] ) ? sanitize_text_field( wp_unslash( $_POST['wr_trendyol_barcode'] ) ) : '';
         $dimensional_weight = isset( $_POST['wr_trendyol_dimensional_weight'] ) ? wc_format_decimal( wp_unslash( $_POST['wr_trendyol_dimensional_weight'] ) ) : '';
         $enabled            = ( isset( $_POST['wr_trendyol_enabled'] ) && 'yes' === $_POST['wr_trendyol_enabled'] ) ? 'yes' : 'no';
 
-        update_post_meta( $product_id, '_wr_trendyol_category_id', $category_id );
-        update_post_meta( $product_id, '_trendyol_category_id', $category_id );
         update_post_meta( $product_id, '_wr_trendyol_brand_id', $brand_id );
         update_post_meta( $product_id, '_wr_trendyol_barcode', $barcode );
         update_post_meta( $product_id, '_wr_trendyol_dimensional_weight', $dimensional_weight );

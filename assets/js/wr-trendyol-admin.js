@@ -2,9 +2,9 @@ jQuery(document).ready(function ($) {
 
     console.log("WR TRENDYOL ADMIN JS LOADED");
 
-    $("#wr_trendyol_category_id, #wr_trendyol_category").on("change", function () {
+    $("#wr_trendyol_category_id, #wr_trendyol_category, #wr_trendyol_category_select").on("change", function () {
 
-        let catId = $(this).val();
+        let catId = $(this).find(":selected").data("category-id") || $(this).val();
         if (!catId) return;
 
         console.log("Selected category:", catId);
@@ -64,9 +64,10 @@ jQuery(function($){
     console.log("WR TRENDYOL PRODUCT JS ACTIVE");
 
     // Kategori seçildiğinde hidden meta alanına kaydet
-    $('#wr_trendyol_category_id, #wr_trendyol_category').on('change', function () {
-        let val = $(this).val();
+    $('#wr_trendyol_category_id, #wr_trendyol_category, #wr_trendyol_category_select').on('change', function () {
+        const val = $(this).find(':selected').data('category-id') || $(this).val();
         console.log("CATEGORY SELECTED:", val);
+        $('#wr_trendyol_category_id').val(val);
         $('#_wr_trendyol_category_id').val(val);
     });
 
@@ -74,7 +75,7 @@ jQuery(function($){
     $('#wr-load-attributes').on('click', function(e){
         e.preventDefault();
 
-        let catId = $('#wr_trendyol_category').val() || $('#_wr_trendyol_category_id').val() || $('#wr_trendyol_category_id').val();
+        let catId = $('#wr_trendyol_category_id').val() || $('#wr_trendyol_category_select').val() || $('#wr_trendyol_category').val() || $('#_wr_trendyol_category_id').val();
         let postId = $('#post_ID').val();
 
         const productNonce = (typeof WRTrendyolProduct !== 'undefined' && WRTrendyolProduct.nonce)
