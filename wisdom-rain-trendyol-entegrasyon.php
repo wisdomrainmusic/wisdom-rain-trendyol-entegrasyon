@@ -31,6 +31,10 @@ if ( ! defined( 'WR_TRENDYOL_PLUGIN_URL' ) ) {
     define( 'WR_TRENDYOL_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 }
 
+if ( ! defined( 'WRTI_URL' ) ) {
+    define( 'WRTI_URL', plugin_dir_url( __FILE__ ) );
+}
+
 spl_autoload_register( function ( $class ) {
     if ( strpos( $class, 'WR\\Trendyol\\' ) !== 0 ) {
         return;

@@ -61,29 +61,21 @@ class WR_Trendyol_Product_Tab {
         // Not: WPBakery / Divi / block-editor fark etmeden JS burada yüklenir
 
         wp_enqueue_script(
-            'wr-trendyol-admin-product',
-            WR_TRENDYOL_PLUGIN_URL . 'assets/js/wr-trendyol-admin-product.js',
+            'wr-trendyol-product-js',
+            WRTI_URL . 'assets/js/wr-trendyol-admin-product.js',
             [ 'jquery' ],
-            WR_TRENDYOL_PLUGIN_VERSION,
+            '1.0.12',
             true
         );
 
         wp_localize_script(
-            'wr-trendyol-admin-product',
-            'wrTrendyolProduct',
+            'wr-trendyol-product-js',
+            'wr_trendyol_product_data',
             [
-                'ajax_url'             => admin_url( 'admin-ajax.php' ),
-                'nonce'                => wp_create_nonce( 'wr_trendyol_product_nonce' ),
-                'missing_category_msg' => __( 'Lütfen önce Trendyol kategorisi seçin.', 'wisdom-rain-trendyol-entegrasyon' ),
-                'push_success_msg'     => __( "Ürün Trendyol'a gönderildi.", 'wisdom-rain-trendyol-entegrasyon' ),
-                'push_error_msg'       => __( 'Ürün gönderilirken hata oluştu. Ayrıntı için hataları kontrol edin.', 'wisdom-rain-trendyol-entegrasyon' ),
+                'ajaxurl' => admin_url( 'admin-ajax.php' ),
+                'nonce'   => wp_create_nonce( 'wr_trendyol_product_nonce' ),
+                'post_id' => get_the_ID(),
             ]
-        );
-
-        wp_add_inline_script(
-            'wr-trendyol-admin-product',
-            'window.WRTrendyolProduct = window.wrTrendyolProduct;',
-            'after'
         );
     }
 
@@ -218,16 +210,11 @@ class WR_Trendyol_Product_Tab {
                     </button>
                 </p>
 
-                <div id="wr_trendyol_attributes_box" style="padding:10px; background:#fff; border:1px solid #ddd;">
-                    <?php echo esc_html__( 'Kategori seçin ve "Özellikleri Yükle" butonuna basın.', 'wisdom-rain-trendyol-entegrasyon' ); ?>
-
-                    <div id="wr_trendyol_attributes_wrap">
-                        <?php
-                        // Sayfa load edildiğinde mevcut attribute meta'larını göster (AJAX sonrası da aynı HTML kullanılacak)
-                        $this->render_attributes_fields_static( $product_id, $category_id );
-                        ?>
-                    </div>
-                </div>
+                <?php
+                echo '<div id="wr_trendyol_attributes_box" class="wr-trendyol-attributes">';
+                $this->render_attributes_fields_static( $product_id, $category_id );
+                echo '</div>';
+                ?>
             </div>
 
             <div class="options_group">
@@ -506,7 +493,7 @@ class WR_Trendyol_Product_Tab {
             wp_send_json_error( __( 'Security check failed.', 'wisdom-rain-trendyol-entegrasyon' ) );
         }
 
-        $product_id  = isset( $_POST['product_id'] ) ? absint( $_POST['product_id'] ) : 0;
+        $product_id  = isset( $_POST['post_id'] ) ? absint( $_POST['post_id'] ) : 0;
         $category_id = isset( $_POST['category_id'] ) ? absint( $_POST['category_id'] ) : 0;
 
         if ( ! $category_id ) {
@@ -543,16 +530,10 @@ class WR_Trendyol_Product_Tab {
             );
         }
 
-        ob_start();
-        $this->render_attributes_fields_static( $product_id, $category_id, $attributes );
-        $html = ob_get_clean();
-
         wp_send_json_success(
             [
-                'category_id' => $category_id,
-                'count'       => count( $attributes ),
-                'attributes'  => $attributes,
-                'html'        => $html,
+                'attributes' => $attributes,
+                'count'      => count( $attributes ),
             ]
         );
     }
