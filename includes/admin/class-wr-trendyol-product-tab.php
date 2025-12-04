@@ -33,8 +33,10 @@ class WR_Trendyol_Product_Tab {
 
         add_action( 'admin_enqueue_scripts', [ $this, 'enqueue_admin_assets' ] );
 
-        // AJAX: kategoriye göre attribute yükleme
-        add_action( 'wp_ajax_wr_trendyol_load_attributes', [ $this, 'ajax_load_attributes' ] );
+        // AJAX: kategoriye göre attribute yükleme (tekil kayıt olacak şekilde)
+        if ( ! has_action( 'wp_ajax_wr_trendyol_load_attributes', [ $this, 'ajax_load_attributes' ] ) ) {
+            add_action( 'wp_ajax_wr_trendyol_load_attributes', [ $this, 'ajax_load_attributes' ] );
+        }
         // AJAX: ürünü Trendyol'a gönder
         add_action( 'wp_ajax_wr_trendyol_push_product', [ $this, 'ajax_push_product' ] );
     }
