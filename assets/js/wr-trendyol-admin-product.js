@@ -67,11 +67,29 @@ jQuery(function($){
 
                         attributes.forEach(attr => {
 
+                            // Trendyol API normalizasyonu
+                            const label =
+                                attr.name ||
+                                attr.attributeName ||
+                                attr.displayName ||
+                                "Undefined Attribute";
+
+                            const id =
+                                attr.id ||
+                                attr.attributeId ||
+                                attr.attributeCode ||
+                                null;
+
+                            if (!id) {
+                                console.warn("WR TRENDYOL: Missing attribute ID", attr);
+                                return;
+                            }
+
                             const row = `
                                 <div class="wr-trendyol-attr-row" style="margin-bottom:10px;">
-                                    <label style="font-weight:bold;">${attr.name}</label>
+                                    <label style="font-weight:bold;">${label}</label>
                                     <input type="text"
-                                           name="wr_trendyol_attributes[${attr.id}]"
+                                           name="wr_trendyol_attributes[${id}]"
                                            style="width:100%; padding:6px;"
                                            value="" />
                                 </div>
