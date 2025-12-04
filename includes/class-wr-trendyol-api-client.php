@@ -280,7 +280,12 @@ class WR_Trendyol_API_Client {
         $cached    = get_transient( $cache_key );
 
         if ( false !== $cached ) {
-            return $cached;
+            if ( empty( $cached ) ) {
+                delete_transient( $cache_key );
+            } else {
+                error_log( 'WR TRENDYOL ATTR CACHE HIT for category ' . $category_id . ' count=' . count( $cached ) );
+                return $cached;
+            }
         }
 
         // NEW OFFICIAL ENDPOINT:
@@ -314,8 +319,11 @@ class WR_Trendyol_API_Client {
         // Do not cache empty results to avoid locking the category into a blank state.
         if ( empty( $attrs ) ) {
             error_log( 'WR TRENDYOL ATTR EMPTY for category ' . $category_id );
+            delete_transient( $cache_key );
             return [];
         }
+
+        error_log( 'WR TRENDYOL ATTR FETCHED for category ' . $category_id . ' count=' . count( $attrs ) );
 
         set_transient( $cache_key, $attrs, HOUR_IN_SECONDS );
 

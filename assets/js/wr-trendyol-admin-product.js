@@ -16,12 +16,12 @@ jQuery(function ($) {
         });
     }
 
-    $('#wr_trendyol_load_attributes_btn').on('click', function (e) {
-        e.preventDefault();
+    const $categoryField = $('#wr_trendyol_category_id');
+    const $loadBtn = $('#wr_trendyol_load_attributes_btn');
 
-        const $btn = $(this);
-        const productId = $btn.data('product-id') || $('#post_ID').val();
-        const categoryId = $('#wr_trendyol_category_id').val();
+    function loadCategoryAttributes(triggerSource) {
+        const productId = $loadBtn.data('product-id') || $('#post_ID').val();
+        const categoryId = $categoryField.val();
 
         if (!config) {
             console.error('WR TRENDYOL CONFIG MISSING');
@@ -34,7 +34,7 @@ jQuery(function ($) {
             return;
         }
 
-        $btn.prop('disabled', true).text('Yükleniyor...');
+        $loadBtn.prop('disabled', true).text('Yükleniyor...');
 
         $.post(
             config.ajax_url,
@@ -61,6 +61,7 @@ jQuery(function ($) {
                     category_id: response.data.category_id,
                     count: response.data.count,
                     attributes: response.data.attributes,
+                    trigger: triggerSource,
                 });
 
             })
@@ -69,7 +70,17 @@ jQuery(function ($) {
                 alert('Sunucuya ulaşılamadı. Lütfen sayfayı yenileyip tekrar deneyin.');
             })
             .always(function () {
-                $btn.prop('disabled', false).text('Özellikleri Yükle');
+                $loadBtn.prop('disabled', false).text('Özellikleri Yükle');
             });
+    }
+
+    // Auto-load attributes when the category is changed manually
+    $categoryField.on('change', function () {
+        loadCategoryAttributes('category-change');
+    });
+
+    $loadBtn.on('click', function (e) {
+        e.preventDefault();
+        loadCategoryAttributes('button');
     });
 });
