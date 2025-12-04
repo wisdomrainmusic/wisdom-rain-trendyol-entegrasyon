@@ -68,7 +68,7 @@ class WR_Trendyol_Product_Tab {
 
         wp_localize_script(
             'wr-trendyol-admin-product',
-            'WRTrendyolProduct',
+            'wrTrendyolProduct',
             [
                 'ajax_url'             => admin_url( 'admin-ajax.php' ),
                 'nonce'                => wp_create_nonce( 'wr_trendyol_product_nonce' ),
@@ -76,6 +76,12 @@ class WR_Trendyol_Product_Tab {
                 'push_success_msg'     => __( "Ürün Trendyol'a gönderildi.", 'wisdom-rain-trendyol-entegrasyon' ),
                 'push_error_msg'       => __( 'Ürün gönderilirken hata oluştu. Ayrıntı için hataları kontrol edin.', 'wisdom-rain-trendyol-entegrasyon' ),
             ]
+        );
+
+        wp_add_inline_script(
+            'wr-trendyol-admin-product',
+            'window.WRTrendyolProduct = window.wrTrendyolProduct;',
+            'after'
         );
     }
 
@@ -488,33 +494,46 @@ class WR_Trendyol_Product_Tab {
      * AJAX: kategoriye göre attribute alanlarını yeniden render et.
      */
     public function ajax_load_attributes() {
-        check_ajax_referer( 'wr_trendyol_product_nonce', 'nonce' );
-
         if ( ! current_user_can( 'edit_products' ) ) {
-            wp_send_json_error( [ 'message' => __( 'Yetkisiz.', 'wisdom-rain-trendyol-entegrasyon' ) ] );
+            wp_send_json_error( __( 'You are not allowed to load attributes.', 'wisdom-rain-trendyol-entegrasyon' ) );
+        }
+
+        $nonce = isset( $_POST['nonce'] ) ? sanitize_text_field( wp_unslash( $_POST['nonce'] ) ) : '';
+
+        if ( ! $nonce || ! wp_verify_nonce( $nonce, 'wr_trendyol_product_nonce' ) ) {
+            wp_send_json_error( __( 'Security check failed.', 'wisdom-rain-trendyol-entegrasyon' ) );
         }
 
         $product_id  = isset( $_POST['product_id'] ) ? absint( $_POST['product_id'] ) : 0;
         $category_id = isset( $_POST['category_id'] ) ? absint( $_POST['category_id'] ) : 0;
 
         if ( ! $category_id ) {
-            wp_send_json_error( [ 'message' => __( 'Geçersiz kategori.', 'wisdom-rain-trendyol-entegrasyon' ) ] );
+            wp_send_json_error( __( 'Category ID is missing.', 'wisdom-rain-trendyol-entegrasyon' ) );
         }
 
-        $client = $this->plugin->get_api_client();
-        $attrs  = $client->get_category_attributes( $category_id );
+        $client     = $this->plugin->get_api_client();
+        $attributes = $client->get_category_attributes( $category_id );
 
-        if ( is_wp_error( $attrs ) || empty( $attrs ) ) {
-            wp_send_json_error( [ 'message' => __( 'Attribute bilgisi alınamadı.', 'wisdom-rain-trendyol-entegrasyon' ) ] );
+        if ( is_wp_error( $attributes ) ) {
+            error_log( 'WR TRENDYOL ATTR ERROR: ' . $attributes->get_error_message() );
+            wp_send_json_error( $attributes->get_error_message() );
+        }
+
+        if ( empty( $attributes ) ) {
+            error_log( 'WR TRENDYOL ATTR ERROR: empty attribute payload for category ' . $category_id );
+            wp_send_json_error( __( 'No attributes returned from Trendyol for this category.', 'wisdom-rain-trendyol-entegrasyon' ) );
         }
 
         ob_start();
-        $this->render_attributes_fields_static( $product_id, $category_id, $attrs );
+        $this->render_attributes_fields_static( $product_id, $category_id, $attributes );
         $html = ob_get_clean();
 
         wp_send_json_success(
             [
-                'html' => $html,
+                'category_id' => $category_id,
+                'count'       => count( $attributes ),
+                'attributes'  => $attributes,
+                'html'        => $html,
             ]
         );
     }
