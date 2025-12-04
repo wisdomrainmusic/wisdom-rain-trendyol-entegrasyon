@@ -247,34 +247,41 @@ class WR_Trendyol_Product_Tab {
      * @param int $post_id Product ID.
      */
     public function render_category_dropdown( $post_id ) {
-
-        $categories = get_option( 'wr_trendyol_categories', [] );
-        if ( empty( $categories ) ) {
-            echo '<span style="color:red;">Kategori listesi yüklenemedi.</span>';
+        if ( ! class_exists( '\\WR_Trendyol_Categories' ) ) {
+            echo '<p class="notice notice-error">Trendyol kategori yöneticisi bulunamadı.</p>';
             return;
         }
 
-        $selected = get_post_meta( $post_id, '_wr_trendyol_category_id', true );
+        $options = \WR_Trendyol_Categories::get_flat_options();
 
-        echo '<select id="wr_trendyol_category_select" name="wr_trendyol_category_select" style="width:100%;">';
-        echo '<option value="">Kategori seçin...</option>';
-
-        foreach ( $categories as $cat ) {
-            $label = $cat['fullPath'];   // Örnek: Kadın > Giyim > Elbise.
-            $id    = $cat['id'];
-
-            printf(
-                '<option value="%1$s" data-category-id="%1$s" %3$s>%2$s (ID: %1$s)</option>',
-                esc_attr( $id ),
-                esc_html( $label ),
-                selected( $selected, $id, false )
-            );
+        if ( empty( $options ) ) {
+            echo '<p class="notice notice-error">Trendyol kategori listesi yüklenemedi. Lütfen ayarları kontrol edin.</p>';
+            return;
         }
 
-        echo '</select>';
+        $selected_id = get_post_meta( $post_id, '_wr_trendyol_category_id', true );
+        ?>
 
-        // Seçilen ID'nin kaydedileceği alan.
-        echo '<input type="hidden" id="wr_trendyol_category_id" name="wr_trendyol_category_id" value="' . esc_attr( $selected ) . '">';
+        <select id="wr_trendyol_category_select"
+                name="wr_trendyol_category_select"
+                style="min-width: 280px;">
+            <option value=""><?php esc_html_e( 'Bir Trendyol kategorisi seçin', 'wr-trendyol' ); ?></option>
+
+            <?php foreach ( $options as $id => $label ) : ?>
+                <option value="<?php echo esc_attr( $id ); ?>"
+                    <?php selected( (int) $selected_id, (int) $id ); ?>
+                    data-category-id="<?php echo esc_attr( $id ); ?>">
+                    <?php echo esc_html( $label ); ?>
+                </option>
+            <?php endforeach; ?>
+        </select>
+
+        <input type="hidden"
+               id="wr_trendyol_category_id"
+               name="wr_trendyol_category_id"
+               value="<?php echo esc_attr( $selected_id ); ?>" />
+
+        <?php
     }
 
     /**

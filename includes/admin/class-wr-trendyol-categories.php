@@ -5,6 +5,44 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class WR_Trendyol_Categories {
 
+    const OPTION_KEY = 'wr_trendyol_categories';
+
+    /**
+     * Kategori ağacını güvenli şekilde getirir.
+     * - Option string ise JSON decode eder
+     * - Boş/bozuk ise API'den veya fallback JSON'dan yeniden çeker
+     * - Son halini OPTION'a array olarak yazar (autoload = no)
+     */
+    public static function get_normalized_tree() {
+        $data = get_option( self::OPTION_KEY );
+
+        // 1) JSON string ise decode et
+        if ( is_string( $data ) && $data !== '' ) {
+            $decoded = json_decode( $data, true );
+            if ( json_last_error() === JSON_ERROR_NONE && is_array( $decoded ) ) {
+                $data = $decoded;
+            } else {
+                $data = array();
+            }
+        }
+
+        // 2) Hala array değilse veya boşsa -> API / fallback dosyadan çek
+        if ( ! is_array( $data ) || empty( $data ) ) {
+            if ( method_exists( __CLASS__, 'get_categories_raw' ) ) {
+                $data = self::get_categories_raw(); // Raporda zaten var
+            } else {
+                $data = array();
+            }
+
+            if ( is_array( $data ) && ! empty( $data ) ) {
+                // Kategori ağacını autoload = no olacak şekilde kaydet
+                update_option( self::OPTION_KEY, $data, false );
+            }
+        }
+
+        return is_array( $data ) ? $data : array();
+    }
+
     /**
      * Read Trendyol categories JSON and return associative array.
      *
@@ -44,27 +82,19 @@ class WR_Trendyol_Categories {
      * @return array
      */
     public static function get_flat_options() {
-        $raw = self::get_categories_raw();
+        $tree = self::get_normalized_tree();
+
+        // Rapora göre bazen ['categories'], bazen ['items'], bazen direkt array
+        if ( isset( $tree['categories'] ) && is_array( $tree['categories'] ) ) {
+            $nodes = $tree['categories'];
+        } elseif ( isset( $tree['items'] ) && is_array( $tree['items'] ) ) {
+            $nodes = $tree['items'];
+        } else {
+            $nodes = $tree;
+        }
 
         $options = array();
-
-        if ( isset( $raw['categories'] ) && is_array( $raw['categories'] ) ) {
-            $items = $raw['categories'];
-        } elseif ( isset( $raw['items'] ) && is_array( $raw['items'] ) ) {
-            // Eski format desteği
-            $items = $raw['items'];
-        } elseif ( is_array( $raw ) ) {
-            // Fallback: API direkt array dönerse
-            $items = $raw;
-        } else {
-            return array();
-        }
-
-        foreach ( $items as $item ) {
-            self::walk_category( $item, array(), $options );
-        }
-
-        asort( $options, SORT_NATURAL | SORT_FLAG_CASE );
+        self::walk_categories( $nodes, $options );
 
         return $options;
     }
@@ -93,6 +123,38 @@ class WR_Trendyol_Categories {
             }
         }
     }
+
+    /**
+     * Recursive kategori yürüyücüsü.
+     */
+    protected static function walk_categories( $nodes, &$options, $prefix = '' ) {
+        if ( ! is_array( $nodes ) ) {
+            return;
+        }
+
+        foreach ( $nodes as $cat ) {
+            $id   = isset( $cat['id'] ) ? $cat['id'] : null;
+            $name = '';
+
+            if ( isset( $cat['fullPath'] ) && '' !== $cat['fullPath'] ) {
+                // Bazı API cevapları fullPath taşıyor
+                $name = $cat['fullPath'];
+            } elseif ( isset( $cat['name'] ) ) {
+                $name = $cat['name'];
+            }
+
+            if ( ! $id || '' === $name ) {
+                continue;
+            }
+
+            $label          = $prefix ? $prefix . ' > ' . $name : $name;
+            $options[ $id ] = $label;
+
+            if ( ! empty( $cat['subCategories'] ) && is_array( $cat['subCategories'] ) ) {
+                self::walk_categories( $cat['subCategories'], $options, $label );
+            }
+        }
+    }
 }
 
 if ( ! function_exists( 'wr_trendyol_get_category_options' ) ) {
@@ -109,58 +171,37 @@ if ( ! function_exists( 'wr_trendyol_get_category_options' ) ) {
 /**
  * Trendyol Category Dropdown (stabil versiyon)
  *
- * Auto-repairs corrupted option data, safe renders, and supports ID persistence.
+ * Helper tabanlı, normalize edilmiş kategori listesini güvenle render eder.
  */
 function wr_trendyol_render_category_dropdown( $post ) {
-
-    echo '<div class="wr-field">';
-    echo '<label><strong>Trendyol Category</strong></label>';
-
-    // 1) Kategorileri al
-    $categories = get_option( 'wr_trendyol_categories' );
-
-    // 2) BOZUKSA OTOMATİK TAMİR
-    if ( ! is_array( $categories ) || empty( $categories ) ) {
-
-        // LOG
-        error_log( 'WR TRENDYOL: Categories corrupted, auto-refetch triggered.' );
-
-        $api = null;
-
-        if ( class_exists( '\\WR\\Trendyol\\WR_Trendyol_Plugin' ) ) {
-            $plugin = \WR\Trendyol\WR_Trendyol_Plugin::instance();
-            $api    = $plugin->get_api_client();
-        }
-
-        // Refetch
-        if ( $api ) {
-            $data = $api->get_categories();
-
-            if ( $data && is_array( $data ) && ! is_wp_error( $data ) ) {
-                update_option( 'wr_trendyol_categories', $data );
-                $categories = $data;
-            }
-        }
-    }
-
-    // 3) Hala array değilse → kullanıcıya mesaj
-    if ( ! is_array( $categories ) || empty( $categories ) ) {
-        echo '<span style="color:#d00;">Kategori listesi yüklenemedi.</span>';
-        echo '</div>';
+    if ( ! class_exists( 'WR_Trendyol_Categories' ) ) {
+        echo '<span style="color:red;">Trendyol kategori yöneticisi bulunamadı.</span>';
         return;
     }
 
-    // 4) Kaydedilmiş kategori ID
-    $saved = get_post_meta( $post->ID, '_wr_trendyol_category_id', true );
+    $options = WR_Trendyol_Categories::get_flat_options();
 
-    echo '<select id="wr_trendyol_category_id" name="wr_trendyol_category_id" style="width:100%;">';
-    echo '<option value="">Kategori Seçin</option>';
+    if ( empty( $options ) ) {
+        echo '<span style="color:red;">Trendyol kategori listesi yüklenemedi.</span>';
+        return;
+    }
 
-    // 5) Hiyerarşik dropdown oluştur
-    wr_trendyol_print_recursive_options( $categories, $saved );
+    $selected = get_post_meta( $post->ID, '_wr_trendyol_category_id', true );
+
+    echo '<select id="wr_trendyol_category_id" name="wr_trendyol_category_id" style="min-width:280px;">';
+
+    echo '<option value="">' . esc_html__( 'Bir Trendyol kategorisi seçin', 'wr-trendyol' ) . '</option>';
+
+    foreach ( $options as $id => $label ) {
+        printf(
+            '<option value="%d"%s>%s</option>',
+            (int) $id,
+            selected( (int) $selected, (int) $id, false ),
+            esc_html( $label )
+        );
+    }
 
     echo '</select>';
-    echo '</div>';
 }
 
 /**
