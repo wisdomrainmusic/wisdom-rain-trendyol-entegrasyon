@@ -279,7 +279,7 @@ class WR_Trendyol_API_Client {
         $cache_key = 'wr_trendyol_cat_attrs_' . $category_id;
         $cached    = get_transient( $cache_key );
 
-        if ( $cached !== false ) {
+        if ( false !== $cached ) {
             return $cached;
         }
 
@@ -309,6 +309,12 @@ class WR_Trendyol_API_Client {
         // Her ihtimale karşı array değilse boş yap
         if ( ! is_array( $attrs ) ) {
             $attrs = [];
+        }
+
+        // Do not cache empty results to avoid locking the category into a blank state.
+        if ( empty( $attrs ) ) {
+            error_log( 'WR TRENDYOL ATTR EMPTY for category ' . $category_id );
+            return [];
         }
 
         set_transient( $cache_key, $attrs, HOUR_IN_SECONDS );
