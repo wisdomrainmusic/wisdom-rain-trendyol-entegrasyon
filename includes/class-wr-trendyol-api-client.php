@@ -278,7 +278,11 @@ class WR_Trendyol_API_Client {
         if ( $cached = get_transient($cache_key) )
             return $cached;
 
-        $path = "integration/ecgw/v1/{$this->seller_id}/lookup/product-categories/{$category_id}/attributes";
+        /**
+         * Attribute endpoint SAPIGW kullanmaz.
+         * Mutlak URL kullanarak request() birleşimini bypass ediyoruz.
+         */
+        $path = "https://api.trendyol.com/integration/ecgw/v1/{$this->seller_id}/lookup/product-categories/{$category_id}/attributes";
 
         $res  = $this->request('GET', $path);
 
