@@ -5,19 +5,23 @@ jQuery(function($){
     const btn = $('#wr_trendyol_load_attributes_btn');
 
     if (!btn.length) {
-        console.warn("WR Trendyol: load button not found.");
+        console.warn("WR Trendyol: Load button not found.");
         return;
     }
 
     btn.on("click", function (e) {
         e.preventDefault();
 
-        const category_id = $('#product_cat').val() || null;
+        // 🔥 DOĞRU ALAN
+        const category_id = $('#wr_trendyol_category_id').val();
         const nonce = wr_trendyol_product_data.nonce;
         const post_id = wr_trendyol_product_data.post_id;
 
-        if (!category_id) {
-            alert("Lütfen bir kategori seçin.");
+        console.log("SELECTED CATEGORY ID:", category_id);
+
+        // ❗ DOĞRU VALIDATION
+        if (!category_id || category_id.trim() === "") {
+            alert("Lütfen bir Trendyol kategorisi seçin.");
             return;
         }
 
@@ -33,11 +37,9 @@ jQuery(function($){
                 post_id: post_id,
                 nonce: nonce
             },
+
             success: function (response) {
                 console.log("WR ATTR RESPONSE:", response);
-
-                // ❌ eski sistem burada alert(response) diyordu → [object Object]
-                // ✔ yeni sistem: response.success kontrolü + güvenli JSON parse
 
                 if (!response) {
                     alert("Sunucudan geçersiz yanıt alındı.");
@@ -47,25 +49,34 @@ jQuery(function($){
                 if (response.success === true) {
 
                     const payload = response.data || [];
-                    const attributes = Array.isArray(payload) ? payload : (payload.attributes || []);
+                    const attributes = Array.isArray(payload)
+                        ? payload
+                        : (payload.attributes || []);
 
                     if (!attributes.length) {
-                        alert("Bu kategori için Trendyol tarafından zorunlu özellik bulunmuyor.");
+                        alert("Bu kategori için Trendyol zorunlu özellik bulunmuyor.");
                         return;
                     }
 
-                    // FORM ALANINA YAZ
+                    // 🔥 FORM ALANINA YAZ
                     const box = $('#wr_trendyol_attributes_box');
+
                     if (box.length) {
-                        box.html("");
+
+                        box.html(""); // önce temizle
 
                         attributes.forEach(attr => {
+
                             const row = `
-                                <div class="wr-trendyol-attr-row">
-                                    <label>${attr.name}</label>
-                                    <input type="text" name="wr_trendyol_attributes[${attr.id}]" value="" />
+                                <div class="wr-trendyol-attr-row" style="margin-bottom:10px;">
+                                    <label style="font-weight:bold;">${attr.name}</label>
+                                    <input type="text"
+                                           name="wr_trendyol_attributes[${attr.id}]"
+                                           style="width:100%; padding:6px;"
+                                           value="" />
                                 </div>
                             `;
+
                             box.append(row);
                         });
                     }
@@ -74,17 +85,19 @@ jQuery(function($){
                     return;
                 }
 
-                // ERROR CASE
+                // ❌ ERROR CASE
                 const msg = (response.data && response.data.message)
                     ? response.data.message
                     : "Trendyol'dan geçersiz yanıt alındı.";
 
                 alert(msg);
             },
+
             error: function (xhr, status) {
                 console.error("WR AJAX ERROR:", status, xhr.responseText);
                 alert("Trendyol bağlantı hatası. Lütfen tekrar deneyin.");
             },
+
             complete: function () {
                 btn.prop("disabled", false).text("Özellikleri Yükle");
             }
