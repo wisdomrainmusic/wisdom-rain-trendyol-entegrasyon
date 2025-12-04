@@ -90,6 +90,10 @@ class WR_Trendyol_Plugin {
             'environment' => self::ENV_PROD,
             'user_agent'  => '',
             'debug'       => 0,
+            'cargo_company_id'   => 0,
+            'delivery_duration'  => 1,
+            'shipment_address_id'=> 0,
+            'return_address_id'  => 0,
         ];
 
         $settings = get_option( self::OPTION_KEY, [] );

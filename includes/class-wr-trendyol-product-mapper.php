@@ -1,4 +1,6 @@
 <?php
+use WR\Trendyol\WR_Trendyol_API_Client;
+
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
@@ -105,6 +107,16 @@ class WR_Trendyol_Product_Mapper {
             $quantity = 0;
         }
 
+        $prices = $this->map_prices( $product );
+        if ( is_wp_error( $prices ) ) {
+            return $prices;
+        }
+
+        $logistics = $this->map_logistics();
+        if ( is_wp_error( $logistics ) ) {
+            return $logistics;
+        }
+
         $payload_item = array(
             'barcode'           => $barcode,
             'title'             => $title,
@@ -117,9 +129,15 @@ class WR_Trendyol_Product_Mapper {
             'productMainId'     => $sku,
             'images'            => $images,
             'attributes'        => $attributes_payload,
+            'listPrice'         => $prices['listPrice'],
+            'salePrice'         => $prices['salePrice'],
+            'vatRate'           => $prices['vatRate'],
+            'cargoCompanyId'    => $logistics['cargoCompanyId'],
+            'deliveryDuration'  => $logistics['deliveryDuration'],
+            'shipmentAddressId' => $logistics['shipmentAddressId'],
+            'returnAddressId'   => $logistics['returnAddressId'],
         );
 
-        // Fiyat bilgisini burada göndermiyoruz; ayrı price-and-inventory endpoint'i ile yapılacak.
         return $payload_item;
     }
 
@@ -196,12 +214,107 @@ class WR_Trendyol_Product_Mapper {
 
             if ( $allow_custom && '' !== $stored_custom ) {
                 $payload[] = [
-                    'attributeId' => $attr_id,
-                    'customValue' => $stored_custom,
+                    'attributeId'         => $attr_id,
+                    'attributeValueId'    => 0,
+                    'customAttributeValue' => $stored_custom,
                 ];
             }
         }
 
         return $payload;
+    }
+
+    /**
+     * Map WooCommerce prices to Trendyol payload.
+     *
+     * @param \WC_Product $product Product instance.
+     *
+     * @return array|WP_Error
+     */
+    protected function map_prices( $product ) {
+        $regular_price = $product->get_regular_price();
+        $sale_price    = $product->get_sale_price();
+
+        if ( '' === $regular_price ) {
+            return new WP_Error( 'wr_trendyol_missing_regular_price', __( 'Ürünün normal fiyatı (regular price) bulunamadı.', 'wisdom-rain-trendyol-entegrasyon' ) );
+        }
+
+        $regular_price = (float) wc_format_decimal( $regular_price );
+        $sale_price    = '' !== $sale_price ? (float) wc_format_decimal( $sale_price ) : $regular_price;
+
+        $vat_rate = $this->resolve_vat_rate( $product );
+        if ( is_wp_error( $vat_rate ) ) {
+            return $vat_rate;
+        }
+
+        return array(
+            'listPrice' => $regular_price,
+            'salePrice' => $sale_price,
+            'vatRate'   => $vat_rate,
+        );
+    }
+
+    /**
+     * Extract VAT rate percentage from WooCommerce tax settings.
+     *
+     * @param \WC_Product $product Product instance.
+     *
+     * @return float|WP_Error
+     */
+    protected function resolve_vat_rate( $product ) {
+        $tax_class = $product->get_tax_class();
+        $rates     = WC_Tax::get_rates( $tax_class );
+
+        if ( empty( $rates ) && '' !== $tax_class ) {
+            $rates = WC_Tax::get_rates( '' );
+        }
+
+        if ( empty( $rates ) ) {
+            return new WP_Error( 'wr_trendyol_missing_vat_rate', __( 'Vergi oranı bulunamadı. Lütfen ürün için geçerli bir vergi sınıfı seçin.', 'wisdom-rain-trendyol-entegrasyon' ) );
+        }
+
+        $rate = reset( $rates );
+        $rate_value = isset( $rate['rate'] ) ? (float) $rate['rate'] : null;
+
+        if ( null === $rate_value ) {
+            return new WP_Error( 'wr_trendyol_invalid_vat_rate', __( 'Vergi oranı çözümlenemedi.', 'wisdom-rain-trendyol-entegrasyon' ) );
+        }
+
+        return $rate_value;
+    }
+
+    /**
+     * Map logistics fields required by Trendyol.
+     *
+     * @return array|WP_Error
+     */
+    protected function map_logistics() {
+        $settings = $this->client->get_settings();
+
+        $cargo_company_id = isset( $settings['cargo_company_id'] ) ? absint( $settings['cargo_company_id'] ) : 0;
+        $delivery_duration = isset( $settings['delivery_duration'] ) ? absint( $settings['delivery_duration'] ) : 1;
+        $shipment_address_id = isset( $settings['shipment_address_id'] ) ? absint( $settings['shipment_address_id'] ) : 0;
+        $return_address_id   = isset( $settings['return_address_id'] ) ? absint( $settings['return_address_id'] ) : 0;
+
+        $delivery_duration = max( 1, min( 7, $delivery_duration ) );
+
+        if ( ! $cargo_company_id ) {
+            return new WP_Error( 'wr_trendyol_missing_cargo_company', __( 'Trendyol için kargo firması (cargoCompanyId) zorunlu.', 'wisdom-rain-trendyol-entegrasyon' ) );
+        }
+
+        if ( ! $shipment_address_id ) {
+            return new WP_Error( 'wr_trendyol_missing_shipment_address', __( 'Trendyol shipmentAddressId boş olamaz.', 'wisdom-rain-trendyol-entegrasyon' ) );
+        }
+
+        if ( ! $return_address_id ) {
+            return new WP_Error( 'wr_trendyol_missing_return_address', __( 'Trendyol returnAddressId boş olamaz.', 'wisdom-rain-trendyol-entegrasyon' ) );
+        }
+
+        return array(
+            'cargoCompanyId'    => $cargo_company_id,
+            'deliveryDuration'  => $delivery_duration,
+            'shipmentAddressId' => $shipment_address_id,
+            'returnAddressId'   => $return_address_id,
+        );
     }
 }

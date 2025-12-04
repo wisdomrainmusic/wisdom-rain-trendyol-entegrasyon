@@ -95,6 +95,11 @@ class WR_Trendyol_Settings_Page {
 
         $sanitized['debug'] = ! empty( $input['debug'] ) ? 1 : 0;
 
+        $sanitized['cargo_company_id']    = isset( $input['cargo_company_id'] ) ? absint( $input['cargo_company_id'] ) : 0;
+        $sanitized['delivery_duration']   = isset( $input['delivery_duration'] ) ? absint( $input['delivery_duration'] ) : 1;
+        $sanitized['shipment_address_id'] = isset( $input['shipment_address_id'] ) ? absint( $input['shipment_address_id'] ) : 0;
+        $sanitized['return_address_id']   = isset( $input['return_address_id'] ) ? absint( $input['return_address_id'] ) : 0;
+
         return $sanitized;
     }
 
