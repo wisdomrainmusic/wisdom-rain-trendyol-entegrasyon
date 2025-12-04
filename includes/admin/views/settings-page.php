@@ -182,11 +182,12 @@ $cargo_labels      = \WR\Trendyol\WR_Trendyol_Plugin::get_cargo_company_labels()
                     <label for="wr_trendyol_shipment_address_id"><?php esc_html_e( 'Shipment Address ID', 'wisdom-rain-trendyol-entegrasyon' ); ?></label>
                 </th>
                 <td>
-                    <input type="number"
+                    <input type="text"
                            id="wr_trendyol_shipment_address_id"
                            name="<?php echo esc_attr( \WR\Trendyol\WR_Trendyol_Plugin::OPTION_KEY ); ?>[shipment_address_id]"
                            value="<?php echo esc_attr( $settings['shipment_address_id'] ); ?>" />
                     <p class="description"><?php esc_html_e( 'Trendyol panelinde tanımlı shipmentAddressId değerini girin.', 'wisdom-rain-trendyol-entegrasyon' ); ?></p>
+                    <p class="description"><?php esc_html_e( 'Bu ID, Trendyol panelinizde Ayarlar → Adres Bilgileri bölümünde Adres ID olarak görünür.', 'wisdom-rain-trendyol-entegrasyon' ); ?></p>
                 </td>
             </tr>
 

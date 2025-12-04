@@ -100,10 +100,24 @@ class WR_Trendyol_Settings_Page {
             error_log( sprintf( 'WR TRENDYOL WARN: Invalid cargo_company_id submitted in settings => %s', wp_json_encode( $input['cargo_company_id'] ) ) );
         }
 
-        $sanitized['cargo_company_id']    = $normalized_cargo ? (int) $normalized_cargo : 0;
-        $sanitized['delivery_duration']   = isset( $input['delivery_duration'] ) ? absint( $input['delivery_duration'] ) : 1;
-        $sanitized['shipment_address_id'] = isset( $input['shipment_address_id'] ) ? absint( $input['shipment_address_id'] ) : 0;
-        $sanitized['return_address_id']   = isset( $input['return_address_id'] ) ? absint( $input['return_address_id'] ) : 0;
+        $sanitized['cargo_company_id']  = $normalized_cargo ? (int) $normalized_cargo : 0;
+        $sanitized['delivery_duration'] = isset( $input['delivery_duration'] ) ? absint( $input['delivery_duration'] ) : 1;
+
+        $shipment_address_raw = isset( $input['shipment_address_id'] ) ? wp_unslash( $input['shipment_address_id'] ) : '';
+        $shipment_address_id  = absint( $shipment_address_raw );
+
+        if ( '' !== $shipment_address_raw ) {
+            if ( preg_match( '/^\d+$/', (string) $shipment_address_raw ) && $shipment_address_id > 0 ) {
+                $sanitized['shipment_address_id'] = $shipment_address_id;
+            } else {
+                error_log( sprintf( 'WR TRENDYOL WARN: Invalid shipment_address_id submitted in settings => %s', wp_json_encode( $shipment_address_raw ) ) );
+                $sanitized['shipment_address_id'] = 0;
+            }
+        } else {
+            $sanitized['shipment_address_id'] = 0;
+        }
+
+        $sanitized['return_address_id'] = isset( $input['return_address_id'] ) ? absint( $input['return_address_id'] ) : 0;
 
         return $sanitized;
     }
