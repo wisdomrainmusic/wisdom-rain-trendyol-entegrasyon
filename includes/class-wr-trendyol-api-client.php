@@ -19,9 +19,15 @@ class WR_Trendyol_API_Client {
      * Trendyol yeni gateway – ürün gönderimi için zorunlu SAPIGW adresi
      */
     protected $environments = [
-        // Resmi APIGW hostları
-        WR_Trendyol_Plugin::ENV_PROD    => 'https://apigw.trendyol.com',
-        WR_Trendyol_Plugin::ENV_SANDBOX => 'https://stageapigw.trendyol.com',
+        /**
+         * SAPIGW – Trendyol ürün servisi için zorunlu gateway.
+         *
+         * NOT: Daha önce apigw/stageapigw hostları kullanılıyordu. Bu durumda
+         * /sapigw path'i olmadığı için ürün push çağrıları Cloudflare katmanında
+         * HTTP 556 Service Unavailable ile kapanıyordu.
+         */
+        WR_Trendyol_Plugin::ENV_PROD    => 'https://api.trendyol.com/sapigw',
+        WR_Trendyol_Plugin::ENV_SANDBOX => 'https://stageapi.trendyol.com/sapigw',
     ];
 
     public function __construct( array $settings ) {
@@ -44,7 +50,12 @@ class WR_Trendyol_API_Client {
     }
 
     public function get_base_url() {
-        return trailingslashit( $this->environments[$this->environment] );
+        if ( ! isset( $this->environments[ $this->environment ] ) ) {
+            $this->environment = WR_Trendyol_Plugin::ENV_PROD;
+        }
+
+        // Trailing slash'i tek yerde yönetiyoruz; request() içinde untrailingslashit ile temizlenip tekrar ekleniyor.
+        return $this->environments[ $this->environment ];
     }
 
     protected function get_default_user_agent() {
@@ -120,8 +131,22 @@ class WR_Trendyol_API_Client {
             return new WP_Error('wr_trendyol_missing_credentials', 'API key ve secret gerekli.');
         }
 
-        $is_absolute = (bool) parse_url($path, PHP_URL_SCHEME);
-        $url = $is_absolute ? $path : $this->get_base_url() . ltrim($path, '/');
+        /**
+         * URL normalizasyonu
+         *
+         * - Mutlak URL verilmişse (tam test adresi vb.) doğrudan kullan.
+         * - Göreli path verilmişse SAPIGW base ile birleştir.
+         *   Burada çift slash ve eksik /sapigw problemlerini engellemek için
+         *   base'i untrailingslashit, path'i ltrim('/') ile temizliyoruz.
+         */
+        $is_absolute_url = (bool) parse_url( $path, PHP_URL_SCHEME );
+
+        if ( $is_absolute_url ) {
+            $url = $path;
+        } else {
+            $base = untrailingslashit( $this->get_base_url() );
+            $url  = $base . '/' . ltrim( $path, '/' );
+        }
 
         if ( ! empty($args['query']) ) {
             $url = add_query_arg($args['query'], $url);
@@ -189,7 +214,10 @@ class WR_Trendyol_API_Client {
      * 🚀 ÜRÜN GÖNDERİM ENDPOINT — DOĞRU HALİ
      */
     public function get_products_path() {
-        // Resmi dokümantasyon: /suppliers/{supplierId}/v2/products
+        /**
+         * SAPIGW v2 ürün endpoint'i
+         * Örnek: https://api.trendyol.com/sapigw/suppliers/{sellerId}/v2/products
+         */
         return sprintf( '/suppliers/%s/v2/products', rawurlencode( $this->seller_id ) );
     }
 
