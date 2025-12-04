@@ -1,4 +1,6 @@
 <?php
+use WR\Trendyol\WR_Trendyol_API_Client;
+
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
@@ -41,18 +43,23 @@ class WR_Trendyol_Product_Sync {
             'items' => array( $payload_item ),
         );
 
-        $seller_id = get_option( WR_TRENDYOL_OPTION_KEY );
-        // seller id zaten client içinde, path'te kullanılacak
+        $method   = $this->has_remote_product( $product_id ) ? 'PUT' : 'POST';
+        $endpoint = $this->client->get_products_path();
 
         $result = $this->client->request(
-            'POST',
-            sprintf( '/sapigw/suppliers/%s/products', $this->client_seller_id() ),
+            $method,
+            $endpoint,
             array(
                 'body' => $payload,
             )
         );
 
         if ( is_wp_error( $result ) ) {
+            $data = $result->get_error_data();
+            if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+                error_log( 'WR TRENDYOL PUSH ERROR: ' . $result->get_error_message() . ' DATA: ' . print_r( $data, true ) );
+            }
+
             return $result;
         }
 
@@ -88,5 +95,18 @@ class WR_Trendyol_Product_Sync {
         }
 
         return '';
+    }
+
+    /**
+     * Determine if product was previously pushed.
+     *
+     * @param int $product_id Product ID.
+     *
+     * @return bool
+     */
+    protected function has_remote_product( $product_id ) {
+        $existing_tid = get_post_meta( $product_id, '_wr_trendyol_product_id', true );
+
+        return ! empty( $existing_tid );
     }
 }

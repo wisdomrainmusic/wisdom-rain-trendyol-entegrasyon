@@ -9,6 +9,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class WR_Trendyol_API_Client {
     /**
+     * Raw plugin settings array.
+     *
+     * @var array
+     */
+    protected $settings = [];
+
+    /**
      * Seller/Supplier ID.
      *
      * @var string
@@ -67,6 +74,7 @@ class WR_Trendyol_API_Client {
      * @param array $settings Plugin settings.
      */
     public function __construct( array $settings ) {
+        $this->settings    = $settings;
         $this->seller_id   = isset( $settings['seller_id'] ) ? trim( (string) $settings['seller_id'] ) : '';
         $this->api_key     = isset( $settings['api_key'] ) ? trim( (string) $settings['api_key'] ) : '';
         $this->api_secret  = isset( $settings['api_secret'] ) ? trim( (string) $settings['api_secret'] ) : '';
@@ -88,6 +96,15 @@ class WR_Trendyol_API_Client {
         }
 
         return trailingslashit( $this->environments[ $this->environment ] );
+    }
+
+    /**
+     * Return plugin settings passed to the client.
+     *
+     * @return array
+     */
+    public function get_settings() {
+        return $this->settings;
     }
 
     /**
@@ -191,7 +208,7 @@ class WR_Trendyol_API_Client {
 
             return $this->wrap_error( 'trendyol_api_error', $message, [
                 'status' => $status,
-                'body'   => $this->debug ? $decoded : null,
+                'body'   => $decoded,
                 'url'    => $url,
             ] );
         }
@@ -216,6 +233,15 @@ class WR_Trendyol_API_Client {
         $path = sprintf( '/integration/sellers/%s/addresses', rawurlencode( $this->seller_id ) );
 
         return $this->request( 'GET', $path );
+    }
+
+    /**
+     * Build product create/update endpoint path.
+     *
+     * @return string
+     */
+    public function get_products_path() {
+        return sprintf( '/suppliers/%s/v2/products', rawurlencode( $this->seller_id ) );
     }
 
     /**

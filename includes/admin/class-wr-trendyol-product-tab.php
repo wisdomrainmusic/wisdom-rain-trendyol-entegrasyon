@@ -542,15 +542,15 @@ class WR_Trendyol_Product_Tab {
             wp_send_json_error( [ 'message' => 'Yetkiniz yok.' ] );
         }
 
-        $nonce = isset($_POST['nonce']) ? sanitize_text_field($_POST['nonce']) : '';
+        $nonce = isset( $_POST['nonce'] ) ? sanitize_text_field( wp_unslash( $_POST['nonce'] ) ) : '';
 
         if ( ! wp_verify_nonce( $nonce, 'wr_trendyol_product_nonce' ) ) {
             wp_send_json_error( [ 'message' => 'Nonce hatası.' ] );
         }
 
-        $product_id = isset($_POST['product_id']) ? absint($_POST['product_id']) : 0;
+        $product_id = isset( $_POST['product_id'] ) ? absint( wp_unslash( $_POST['product_id'] ) ) : 0;
 
-        if (!$product_id) {
+        if ( ! $product_id ) {
             wp_send_json_error( [ 'message' => 'Geçersiz ürün ID.' ] );
         }
 
@@ -565,8 +565,15 @@ class WR_Trendyol_Product_Tab {
         $result = $sync->push_single_product( $product_id );
 
         if ( is_wp_error( $result ) ) {
+            $message = $result->get_error_message();
+            $data    = $result->get_error_data();
+
+            if ( defined( 'WP_DEBUG' ) && WP_DEBUG && ! empty( $data ) ) {
+                error_log( 'WR TRENDYOL AJAX PUSH ERROR DATA: ' . print_r( $data, true ) );
+            }
+
             wp_send_json_error([
-                'message' => $result->get_error_message()
+                'message' => sprintf( 'API: %s', $message ),
             ]);
         }
 

@@ -2,6 +2,11 @@ jQuery(function ($) {
 
     console.log("WR TRENDYOL PRODUCT JS ACTIVE");
 
+    if (typeof wr_trendyol_product_data === 'undefined') {
+        console.warn('WR Trendyol: localized product data bulunamadı.');
+        return;
+    }
+
     const btn = $('#wr_trendyol_load_attributes_btn');
 
     if (!btn.length) {
@@ -122,6 +127,11 @@ jQuery(function ($) {
 
     console.log("WR TRENDYOL PUSH MODULE ACTIVE");
 
+    if (typeof wr_trendyol_product_data === 'undefined') {
+        console.warn('WR Trendyol: localized push data bulunamadı.');
+        return;
+    }
+
     const pushBtn = $("#wr_trendyol_push_product_btn");
     const resultBox = $("#wr_trendyol_push_result");
 
@@ -134,6 +144,7 @@ jQuery(function ($) {
         e.preventDefault();
 
         const product_id = $(this).data("product-id");
+        console.log('WR Trendyol push product_id attribute:', product_id);
         const nonce = wr_trendyol_product_data.nonce;
 
         if (!product_id) {
