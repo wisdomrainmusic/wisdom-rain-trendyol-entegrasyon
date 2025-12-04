@@ -13,6 +13,53 @@ if ( ! defined( 'ABSPATH' ) ) {
 class WR_Trendyol_Product_Tab {
 
     /**
+     * Trendyol kargo firma listesi (slug => [id, label]).
+     *
+     * @return array
+     */
+    protected function get_cargo_company_options() {
+        return [
+            'yurtici'    => [ 'id' => 1, 'label' => 'Yurtiçi Kargo' ],
+            'aras'       => [ 'id' => 2, 'label' => 'Aras Kargo' ],
+            'mng'        => [ 'id' => 3, 'label' => 'MNG Kargo' ],
+            'surat'      => [ 'id' => 4, 'label' => 'Sürat Kargo' ],
+            'ptt'        => [ 'id' => 5, 'label' => 'PTT Kargo' ],
+            'ups'        => [ 'id' => 6, 'label' => 'UPS' ],
+            'hepsijet'   => [ 'id' => 7, 'label' => 'Hepsijet' ],
+            'tyexpress'  => [ 'id' => 8, 'label' => 'Trendyol Express' ],
+            'dhl'        => [ 'id' => 9, 'label' => 'DHL Kargo' ],
+        ];
+    }
+
+    /**
+     * Normalize stored cargo company meta to dropdown slug.
+     *
+     * @param string|int $value Stored meta value.
+     *
+     * @return string
+     */
+    protected function normalize_cargo_meta_value( $value ) {
+        $map = $this->get_cargo_company_options();
+
+        // Already a valid slug.
+        if ( is_string( $value ) && isset( $map[ $value ] ) ) {
+            return $value;
+        }
+
+        // Old numeric storage; convert to slug.
+        $int_value = absint( $value );
+        if ( $int_value > 0 ) {
+            foreach ( $map as $slug => $data ) {
+                if ( isset( $data['id'] ) && (int) $data['id'] === $int_value ) {
+                    return $slug;
+                }
+            }
+        }
+
+        return '';
+    }
+
+    /**
      * Main plugin instance.
      *
      * @var WR_Trendyol_Plugin
@@ -124,7 +171,7 @@ class WR_Trendyol_Product_Tab {
         $brand_id           = get_post_meta( $product_id, '_wr_trendyol_brand_id', true );
         $barcode            = get_post_meta( $product_id, '_wr_trendyol_barcode', true );
         $dimensional_weight = get_post_meta( $product_id, '_wr_trendyol_dimensional_weight', true );
-        $cargo_company_id   = get_post_meta( $product_id, '_wr_trendyol_cargo_company_id', true );
+        $cargo_company_id   = $this->normalize_cargo_meta_value( get_post_meta( $product_id, '_wr_trendyol_cargo_company_id', true ) );
         $enabled            = 'yes' === get_post_meta( $product_id, '_wr_trendyol_enabled', true );
         $product_tid        = get_post_meta( $product_id, '_wr_trendyol_product_id', true );
 
@@ -179,6 +226,11 @@ class WR_Trendyol_Product_Tab {
                 </p>
 
                 <?php
+                $cargo_options = [ '' => 'Seçin… (Zorunlu)' ];
+                foreach ( $this->get_cargo_company_options() as $slug => $data ) {
+                    $cargo_options[ $slug ] = isset( $data['label'] ) ? $data['label'] : $slug;
+                }
+
                 woocommerce_wp_select(
                     [
                         'id'          => '_wr_trendyol_cargo_company_id',
@@ -186,16 +238,7 @@ class WR_Trendyol_Product_Tab {
                         'value'       => $cargo_company_id,
                         'desc_tip'    => true,
                         'description' => 'Trendyol ürünlerinde kullanılacak kargo firması. Seçilmesi zorunludur.',
-                        'options'     => [
-                            ''   => 'Seçin… (Zorunlu)',
-                            '14' => 'PTT Kargo',
-                            '10' => 'Yurtiçi Kargo',
-                            '11' => 'Aras Kargo',
-                            '16' => 'Sürat Kargo',
-                            '13' => 'UPS',
-                            '36' => 'Trendyol Express',
-                            '20' => 'DHL Kargo',
-                        ],
+                        'options'     => $cargo_options,
                     ]
                 );
                 ?>
@@ -446,10 +489,17 @@ class WR_Trendyol_Product_Tab {
         $barcode            = isset( $_POST['wr_trendyol_barcode'] ) ? sanitize_text_field( wp_unslash( $_POST['wr_trendyol_barcode'] ) ) : '';
         $dimensional_weight = isset( $_POST['wr_trendyol_dimensional_weight'] ) ? wc_format_decimal( wp_unslash( $_POST['wr_trendyol_dimensional_weight'] ) ) : '';
         if ( isset( $_POST['_wr_trendyol_cargo_company_id'] ) ) {
+            $cargo_slug = sanitize_text_field( wp_unslash( $_POST['_wr_trendyol_cargo_company_id'] ) );
+            $options    = $this->get_cargo_company_options();
+
+            if ( ! isset( $options[ $cargo_slug ] ) ) {
+                $cargo_slug = '';
+            }
+
             update_post_meta(
                 $product_id,
                 '_wr_trendyol_cargo_company_id',
-                sanitize_text_field( wp_unslash( $_POST['_wr_trendyol_cargo_company_id'] ) )
+                $cargo_slug
             );
         }
         $enabled            = ( isset( $_POST['wr_trendyol_enabled'] ) && 'yes' === $_POST['wr_trendyol_enabled'] ) ? 'yes' : 'no';
