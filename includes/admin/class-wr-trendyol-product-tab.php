@@ -123,6 +123,7 @@ class WR_Trendyol_Product_Tab {
         }
         $brand_id           = get_post_meta( $product_id, '_wr_trendyol_brand_id', true );
         $barcode            = get_post_meta( $product_id, '_wr_trendyol_barcode', true );
+        $origin             = (int) get_post_meta( $product_id, '_wr_trendyol_origin', true );
         $dimensional_weight = get_post_meta( $product_id, '_wr_trendyol_dimensional_weight', true );
         $enabled            = 'yes' === get_post_meta( $product_id, '_wr_trendyol_enabled', true );
         $product_tid        = get_post_meta( $product_id, '_wr_trendyol_product_id', true );
@@ -160,7 +161,31 @@ class WR_Trendyol_Product_Tab {
                            value="<?php echo esc_attr( $barcode ); ?>"
                            placeholder="<?php esc_attr_e( 'EAN / barkod', 'wisdom-rain-trendyol-entegrasyon' ); ?>" />
                     <span class="description">
-                        <?php _e( 'Zorunlu alan. Boş bırakılırsa otomatik üretilebilir, Trendyol kurallarına göre.', 'wisdom-rain-trendyol-entegrasyon' ); ?>
+                        <?php _e( 'Trendyol API için zorunlu alandır.', 'wisdom-rain-trendyol-entegrasyon' ); ?>
+                    </span>
+                </p>
+
+                <?php
+                $origin_options = [
+                    1 => __( 'Türkiye', 'wisdom-rain-trendyol-entegrasyon' ),
+                    2 => __( 'Almanya', 'wisdom-rain-trendyol-entegrasyon' ),
+                    3 => __( 'Çin', 'wisdom-rain-trendyol-entegrasyon' ),
+                ];
+                ?>
+                <p class="form-field">
+                    <label for="wr_trendyol_origin"><?php _e( 'Menşei (Origin / productCountryId)', 'wisdom-rain-trendyol-entegrasyon' ); ?></label>
+                    <select id="wr_trendyol_origin"
+                            name="wr_trendyol_origin"
+                            style="min-width: 220px;">
+                        <option value=""><?php esc_html_e( 'Lütfen seçin', 'wisdom-rain-trendyol-entegrasyon' ); ?></option>
+                        <?php foreach ( $origin_options as $oid => $label ) : ?>
+                            <option value="<?php echo esc_attr( $oid ); ?>" <?php selected( (int) $origin, (int) $oid ); ?>>
+                                <?php echo esc_html( $label ); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                    <span class="description">
+                        <?php _e( 'Trendyol’un productCountryId alanıdır.', 'wisdom-rain-trendyol-entegrasyon' ); ?>
                     </span>
                 </p>
 
@@ -456,6 +481,7 @@ class WR_Trendyol_Product_Tab {
         $category_id        = $this->save_category_meta( $product_id );
         $brand_id           = isset( $_POST['wr_trendyol_brand_id'] ) ? sanitize_text_field( wp_unslash( $_POST['wr_trendyol_brand_id'] ) ) : '';
         $barcode            = isset( $_POST['wr_trendyol_barcode'] ) ? sanitize_text_field( wp_unslash( $_POST['wr_trendyol_barcode'] ) ) : '';
+        $origin             = isset( $_POST['wr_trendyol_origin'] ) ? absint( wp_unslash( $_POST['wr_trendyol_origin'] ) ) : 0;
         $dimensional_weight = isset( $_POST['wr_trendyol_dimensional_weight'] ) ? wc_format_decimal( wp_unslash( $_POST['wr_trendyol_dimensional_weight'] ) ) : '';
         $cargo_company_raw  = isset( $_POST['wr_trendyol_cargo_company_id'] ) ? wp_unslash( $_POST['wr_trendyol_cargo_company_id'] ) : null;
         $cargo_company_id   = ( null !== $cargo_company_raw ) ? WR_Trendyol_Plugin::normalize_cargo_company_value( $cargo_company_raw ) : null;
@@ -463,6 +489,7 @@ class WR_Trendyol_Product_Tab {
 
         update_post_meta( $product_id, '_wr_trendyol_brand_id', $brand_id );
         update_post_meta( $product_id, '_wr_trendyol_barcode', $barcode );
+        update_post_meta( $product_id, '_wr_trendyol_origin', $origin );
         update_post_meta( $product_id, '_wr_trendyol_dimensional_weight', $dimensional_weight );
         if ( null === $cargo_company_raw ) {
             // Formda alan yoksa mevcut meta'ya dokunma (ör. hızlı düzenleme).
