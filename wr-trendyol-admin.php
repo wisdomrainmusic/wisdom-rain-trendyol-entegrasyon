@@ -28,8 +28,9 @@ add_action('admin_enqueue_scripts', function () {
 // ===============================
 // 2) AJAX HANDLER — FORCE ENABLED
 // ===============================
-add_action('wp_ajax_wr_load_attributes', 'wr_load_attributes_callback');
+// add_action('wp_ajax_wr_load_attributes', 'wr_load_attributes_callback');
 
+/*
 function wr_load_attributes_callback() {
 
     check_ajax_referer('wr_trendyol_nonce', 'nonce');
@@ -73,3 +74,4 @@ function wr_load_attributes_callback() {
 
     wp_send_json_success($json);
 }
+*/
