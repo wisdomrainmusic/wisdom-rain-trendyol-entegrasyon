@@ -87,3 +87,24 @@ function wr_trendyol_bootstrap() {
     \WR\Trendyol\WR_Trendyol_Plugin::instance();
 }
 add_action( 'plugins_loaded', 'wr_trendyol_bootstrap' );
+
+add_action( 'admin_init', function () {
+    if ( ! current_user_can( 'manage_woocommerce' ) ) {
+        return;
+    }
+
+    if ( get_option( 'wr_trendyol_categories_normalized' ) ) {
+        return;
+    }
+
+    $data = get_option( 'wr_trendyol_categories' );
+
+    if ( is_string( $data ) && $data !== '' ) {
+        $decoded = json_decode( $data, true );
+        if ( json_last_error() === JSON_ERROR_NONE && is_array( $decoded ) ) {
+            update_option( 'wr_trendyol_categories', $decoded, false );
+        }
+    }
+
+    update_option( 'wr_trendyol_categories_normalized', 1, false );
+} );
