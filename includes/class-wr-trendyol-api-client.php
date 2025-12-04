@@ -328,9 +328,11 @@ class WR_Trendyol_API_Client {
         }
 
         // NEW OFFICIAL ENDPOINT:
-        // /integration/product/product-categories/{categoryId}/attributes
+        // /integration/ecgw/v1/{sellerId}/lookup/product-categories/{categoryId}/attributes
 
-        $path     = sprintf( 'https://apigw.trendyol.com/integration/product/product-categories/%d/attributes', $category_id );
+        $seller_id = $this->seller_id;
+        $endpoint  = "/integration/ecgw/v1/{$seller_id}/lookup/product-categories/{$category_id}/attributes";
+        $path      = $this->get_base_url() . ltrim( $endpoint, '/' );
         $response = wp_remote_get(
             $path,
             [
