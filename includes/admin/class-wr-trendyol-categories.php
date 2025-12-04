@@ -107,70 +107,81 @@ if ( ! function_exists( 'wr_trendyol_get_category_options' ) ) {
 }
 
 /**
- * Trendyol Category Dropdown (FULL FIXED VERSION)
- * Outputs: <option value="categoryId">Parent > Child > SubChild</option>
+ * Trendyol Category Dropdown (stabil versiyon)
+ *
+ * Auto-repairs corrupted option data, safe renders, and supports ID persistence.
  */
 function wr_trendyol_render_category_dropdown( $post ) {
 
-    // Ürüne daha önce seçilmiş kategori var mı?
-    $selected_id = get_post_meta( $post->ID, '_trendyol_category_id', true );
+    echo '<div class="wr-field">';
+    echo '<label><strong>Trendyol Category</strong></label>';
 
-    if ( ! $selected_id ) {
-        $selected_id = get_post_meta( $post->ID, '_wr_trendyol_category_id', true );
-    }
+    // 1) Kategorileri al
+    $categories = get_option( 'wr_trendyol_categories' );
 
-    // Kategori ağacını alıyoruz (JSON → array)
-    $categories = get_option( 'wr_trendyol_category_tree' );
+    // 2) BOZUKSA OTOMATİK TAMİR
+    if ( ! is_array( $categories ) || empty( $categories ) ) {
 
-    if ( ( ! $categories || ! is_array( $categories ) ) && function_exists( 'wr_trendyol_get_category_options' ) ) {
-        $legacy_tree = get_option( 'wrti_category_tree' );
-        if ( $legacy_tree ) {
-            $decoded = json_decode( $legacy_tree, true );
-            if ( is_array( $decoded ) ) {
-                $categories = isset( $decoded['categories'] ) ? $decoded['categories'] : $decoded;
+        // LOG
+        error_log( 'WR TRENDYOL: Categories corrupted, auto-refetch triggered.' );
+
+        $api = null;
+
+        if ( class_exists( '\\WR\\Trendyol\\WR_Trendyol_Plugin' ) ) {
+            $plugin = \WR\Trendyol\WR_Trendyol_Plugin::instance();
+            $api    = $plugin->get_api_client();
+        }
+
+        // Refetch
+        if ( $api ) {
+            $data = $api->get_categories();
+
+            if ( $data && is_array( $data ) && ! is_wp_error( $data ) ) {
+                update_option( 'wr_trendyol_categories', $data );
+                $categories = $data;
             }
         }
     }
 
-    if ( ! $categories || ! is_array( $categories ) ) {
-        echo '<p style="color:red;">Kategori listesi yüklenemedi.</p>';
+    // 3) Hala array değilse → kullanıcıya mesaj
+    if ( ! is_array( $categories ) || empty( $categories ) ) {
+        echo '<span style="color:#d00;">Kategori listesi yüklenemedi.</span>';
+        echo '</div>';
         return;
     }
 
-    echo '<select id="wr_trendyol_category" name="wr_trendyol_category" style="width:100%;">';
-    echo '<option value="">— Select Trendyol Category —</option>';
+    // 4) Kaydedilmiş kategori ID
+    $saved = get_post_meta( $post->ID, '_wr_trendyol_category_id', true );
 
-    // Recursive builder
-    wr_trendyol_render_options_recursive( $categories, '', $selected_id );
+    echo '<select id="wr_trendyol_category_id" name="wr_trendyol_category_id" style="width:100%;">';
+    echo '<option value="">Kategori Seçin</option>';
+
+    // 5) Hiyerarşik dropdown oluştur
+    wr_trendyol_print_recursive_options( $categories, $saved );
 
     echo '</select>';
+    echo '</div>';
 }
 
 /**
- * Recursive option builder
+ * Recursive dropdown builder
  */
-function wr_trendyol_render_options_recursive( $items, $prefix, $selected_id ) {
-
+function wr_trendyol_print_recursive_options( $items, $saved, $prefix = '' ) {
     foreach ( $items as $item ) {
 
-        $id   = isset( $item['id'] ) ? $item['id'] : '';
-        $name = isset( $item['name'] ) ? $item['name'] : '';
-
-        if ( ! $id ) {
+        if ( ! isset( $item['id'], $item['name'] ) ) {
             continue;
         }
 
-        // Option label (path)
-        $label = $prefix ? $prefix . ' > ' . $name : $name;
+        $selected = ( (string) $saved === (string) $item['id'] ) ? 'selected' : '';
 
-        // Selected?
-        $sel = ( (string) $selected_id === (string) $id ) ? 'selected' : '';
+        echo '<option value="' . esc_attr( $item['id'] ) . '" ' . $selected . '>' .
+             esc_html( $prefix . $item['name'] ) .
+             '</option>';
 
-        echo '<option value="' . esc_attr( $id ) . '" ' . $sel . '>' . esc_html( $label ) . '</option>';
-
-        // If children exist → recursion
-        if ( isset( $item['subCategories'] ) && is_array( $item['subCategories'] ) && count( $item['subCategories'] ) > 0 ) {
-            wr_trendyol_render_options_recursive( $item['subCategories'], $label, $selected_id );
+        // Alt kategori varsa
+        if ( ! empty( $item['subCategories'] ) ) {
+            wr_trendyol_print_recursive_options( $item['subCategories'], $saved, $prefix . '— ' );
         }
     }
 }
@@ -179,13 +190,19 @@ add_action(
     'save_post',
     function ( $post_id ) {
 
-        if ( ! isset( $_POST['wr_trendyol_category'] ) ) {
+        $posted_category = null;
+
+        if ( isset( $_POST['wr_trendyol_category_id'] ) ) {
+            $posted_category = sanitize_text_field( wp_unslash( $_POST['wr_trendyol_category_id'] ) );
+        } elseif ( isset( $_POST['wr_trendyol_category'] ) ) { // Legacy alan.
+            $posted_category = sanitize_text_field( wp_unslash( $_POST['wr_trendyol_category'] ) );
+        }
+
+        if ( null === $posted_category ) {
             return;
         }
 
-        $cat_id = sanitize_text_field( wp_unslash( $_POST['wr_trendyol_category'] ) );
-
-        update_post_meta( $post_id, '_trendyol_category_id', $cat_id );
-        update_post_meta( $post_id, '_wr_trendyol_category_id', $cat_id );
+        update_post_meta( $post_id, '_trendyol_category_id', $posted_category );
+        update_post_meta( $post_id, '_wr_trendyol_category_id', $posted_category );
     }
 );

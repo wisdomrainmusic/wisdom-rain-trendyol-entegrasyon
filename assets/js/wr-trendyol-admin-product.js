@@ -2,6 +2,36 @@ jQuery(function($){
 
     console.log("WR TRENDYOL PRODUCT JS ACTIVE");
 
+    $('#wr_trendyol_category_id').on('change', function(){
+
+        let categoryId = $(this).val();
+        let postId     = $('#post_ID').val();
+
+        if(!categoryId){
+            return;
+        }
+
+        console.log("TR CATEGORY CHANGED →", categoryId);
+
+        // AJAX çağır
+        $.post(ajaxurl, {
+            action: 'wr_trendyol_fetch_attributes',
+            post_id: postId,
+            category_id: categoryId,
+            _wpnonce: (typeof wrTrendyol !== 'undefined' ? wrTrendyol.nonce : '')
+        }, function(response){
+
+            console.log("ATTRIBUTE LOADER RESPONSE →", response);
+
+            if(response.success){
+                location.reload(); // alanları yenile
+            } else {
+                alert("Attribute yüklenemedi.");
+            }
+        });
+
+    });
+
     const dropdown = $("#wr_trendyol_category_select");
     const hidden   = $("#wr_trendyol_category_id");
 
