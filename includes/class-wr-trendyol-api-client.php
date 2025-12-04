@@ -143,6 +143,76 @@ class WR_Trendyol_API_Client {
     }
 
     /**
+     * Basic debug logger guarded by the debug flag.
+     *
+     * @param string $message Log message prefix.
+     * @param array  $context Additional context to print_r.
+     */
+    protected function log_debug( $message, array $context = [] ) {
+        if ( ! $this->debug ) {
+            return;
+        }
+
+        $suffix = empty( $context ) ? '' : ' => ' . print_r( $context, true );
+        error_log( 'WR TRENDYOL DEBUG: ' . $message . $suffix );
+    }
+
+    /**
+     * Build a human readable error message from Trendyol error payloads.
+     *
+     * @param mixed       $decoded        Decoded JSON (array) or null on failure.
+     * @param int         $status         HTTP status code.
+     * @param string|null $status_message HTTP status message.
+     * @param string      $raw_body       Raw HTTP body.
+     *
+     * @return string
+     */
+    protected function format_error_message( $decoded, $status, $status_message, $raw_body ) {
+        $pieces = [];
+
+        if ( $status ) {
+            $pieces[] = sprintf( 'HTTP %d%s', $status, $status_message ? ' ' . $status_message : '' );
+        }
+
+        if ( is_array( $decoded ) ) {
+            $fields = [ 'errorMessage', 'message', 'error', 'errorDescription', 'description' ];
+            foreach ( $fields as $field ) {
+                if ( ! empty( $decoded[ $field ] ) && is_string( $decoded[ $field ] ) ) {
+                    $pieces[] = trim( $decoded[ $field ] );
+                    break;
+                }
+            }
+
+            if ( empty( $pieces ) && isset( $decoded['errors'] ) && is_array( $decoded['errors'] ) ) {
+                $errors = [];
+                foreach ( $decoded['errors'] as $err ) {
+                    if ( is_string( $err ) ) {
+                        $errors[] = $err;
+                    } elseif ( is_array( $err ) ) {
+                        $errors[] = implode( ' - ', array_filter( [ $err['code'] ?? '', $err['message'] ?? '' ] ) );
+                    }
+                }
+
+                if ( ! empty( $errors ) ) {
+                    $pieces[] = implode( '; ', $errors );
+                }
+            }
+
+            if ( isset( $decoded['statusCode'] ) && $decoded['statusCode'] !== $status ) {
+                array_unshift( $pieces, 'StatusCode ' . $decoded['statusCode'] );
+            }
+        } elseif ( is_string( $raw_body ) && '' !== $raw_body ) {
+            $pieces[] = $raw_body;
+        }
+
+        if ( empty( $pieces ) ) {
+            $pieces[] = __( 'Trendyol API error', 'wisdom-rain-trendyol-entegrasyon' );
+        }
+
+        return implode( ' | ', array_filter( $pieces ) );
+    }
+
+    /**
      * Perform a request to Trendyol API.
      *
      * @param string $method HTTP method.
@@ -194,29 +264,49 @@ class WR_Trendyol_API_Client {
             ] );
         }
 
-        $status = wp_remote_retrieve_response_code( $response );
-        $body   = wp_remote_retrieve_body( $response );
+        $status          = wp_remote_retrieve_response_code( $response );
+        $status_message  = wp_remote_retrieve_response_message( $response );
+        $body_raw        = wp_remote_retrieve_body( $response );
+        $decoded         = json_decode( $body_raw, true );
+        $json_error_code = json_last_error();
 
-        $decoded = json_decode( $body, true );
-
-        if ( json_last_error() !== JSON_ERROR_NONE ) {
-            $decoded = $body;
+        if ( JSON_ERROR_NONE !== $json_error_code ) {
+            $decoded = null;
         }
 
         if ( $status >= 400 ) {
-            $message = is_array( $decoded ) && isset( $decoded['message'] ) ? $decoded['message'] : __( 'Trendyol API error', 'wisdom-rain-trendyol-entegrasyon' );
+            $message = $this->format_error_message( $decoded, $status, $status_message, $body_raw );
 
-            return $this->wrap_error( 'trendyol_api_error', $message, [
-                'status' => $status,
-                'body'   => $decoded,
-                'url'    => $url,
-            ] );
+            $error_data = [
+                'status'          => $status,
+                'status_message'  => $status_message,
+                'body'            => null !== $decoded ? $decoded : $body_raw,
+                'raw_body'        => $body_raw,
+                'url'             => $url,
+            ];
+
+            if ( $this->debug ) {
+                $error_data['request_args']    = $request_args;
+                $error_data['response_headers'] = wp_remote_retrieve_headers( $response );
+            }
+
+            if ( $this->debug && $status >= 500 ) {
+                $log_context = $error_data;
+                if ( isset( $log_context['request_args']['headers']['Authorization'] ) ) {
+                    $log_context['request_args']['headers']['Authorization'] = '[redacted]';
+                }
+
+                $this->log_debug( 'HTTP error response', $log_context );
+            }
+
+            return $this->wrap_error( 'trendyol_api_error', $message, $error_data );
         }
 
         return [
-            'status' => $status,
-            'body'   => $decoded,
-            'raw'    => $this->debug ? $response : null,
+            'status'         => $status,
+            'status_message' => $status_message,
+            'body'           => null !== $decoded ? $decoded : $body_raw,
+            'raw'            => $this->debug ? $response : null,
         ];
     }
 

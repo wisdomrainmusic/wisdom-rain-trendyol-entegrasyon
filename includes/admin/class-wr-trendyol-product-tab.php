@@ -658,13 +658,55 @@ class WR_Trendyol_Product_Tab {
         if ( is_wp_error( $result ) ) {
             $message = $result->get_error_message();
             $data    = $result->get_error_data();
+            $pieces  = [];
+
+            if ( ! empty( $data['status'] ) ) {
+                $status_label = 'HTTP ' . $data['status'];
+                if ( ! empty( $data['status_message'] ) ) {
+                    $status_label .= ' ' . $data['status_message'];
+                }
+                $pieces[] = $status_label;
+            }
+
+            if ( isset( $data['body'] ) ) {
+                $body = $data['body'];
+
+                if ( is_array( $body ) ) {
+                    foreach ( [ 'statusCode', 'message', 'errorMessage', 'description' ] as $field ) {
+                        if ( ! empty( $body[ $field ] ) ) {
+                            $pieces[] = is_scalar( $body[ $field ] ) ? $body[ $field ] : wp_json_encode( $body[ $field ] );
+                        }
+                    }
+
+                    if ( isset( $body['errors'] ) && is_array( $body['errors'] ) ) {
+                        $errors = [];
+                        foreach ( $body['errors'] as $err ) {
+                            if ( is_array( $err ) ) {
+                                $errors[] = implode( ' - ', array_filter( [ $err['code'] ?? '', $err['message'] ?? '' ] ) );
+                            } elseif ( is_scalar( $err ) ) {
+                                $errors[] = (string) $err;
+                            }
+                        }
+
+                        if ( ! empty( $errors ) ) {
+                            $pieces[] = implode( '; ', $errors );
+                        }
+                    }
+                } elseif ( is_string( $body ) && '' !== $body ) {
+                    $pieces[] = $body;
+                }
+            }
+
+            if ( empty( $pieces ) ) {
+                $pieces[] = $message;
+            }
 
             if ( defined( 'WP_DEBUG' ) && WP_DEBUG && ! empty( $data ) ) {
                 error_log( 'WR TRENDYOL AJAX PUSH ERROR DATA: ' . print_r( $data, true ) );
             }
 
             wp_send_json_error([
-                'message' => sprintf( 'API: %s', $message ),
+                'message' => sprintf( 'API: %s', implode( ' | ', array_filter( $pieces ) ) ),
             ]);
         }
 
