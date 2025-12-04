@@ -8,6 +8,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 $selected_category = get_option( 'wr_trendyol_category_id', '' );
 $category_options  = function_exists( 'wr_trendyol_get_category_options' ) ? wr_trendyol_get_category_options() : [];
+$cargo_labels      = \WR\Trendyol\WR_Trendyol_Plugin::get_cargo_company_labels();
 
 ?>
 <div class="wrap">
@@ -141,6 +142,64 @@ $category_options  = function_exists( 'wr_trendyol_get_category_options' ) ? wr_
                             <?php checked( ! empty( $settings['debug'] ) ); ?> />
                         Hata durumunda detaylı WP_Error verisi üret (geliştirme ortamında kullanın).
                     </label>
+                </td>
+            </tr>
+
+            <tr>
+                <th scope="row">
+                    <label for="wr_trendyol_cargo_company_id"><?php esc_html_e( 'Varsayılan Kargo Firması', 'wisdom-rain-trendyol-entegrasyon' ); ?></label>
+                </th>
+                <td>
+                    <select name="<?php echo esc_attr( \WR\Trendyol\WR_Trendyol_Plugin::OPTION_KEY ); ?>[cargo_company_id]" id="wr_trendyol_cargo_company_id" style="min-width: 220px;">
+                        <option value=""><?php esc_html_e( '— Seçiniz —', 'wisdom-rain-trendyol-entegrasyon' ); ?></option>
+                        <?php foreach ( $cargo_labels as $cid => $label ) : ?>
+                            <option value="<?php echo esc_attr( $cid ); ?>" <?php selected( (int) $settings['cargo_company_id'], (int) $cid ); ?>>
+                                <?php echo esc_html( $label ); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                    <p class="description"><?php esc_html_e( 'Trendyol cargoCompanyId whitelist’ine göre resmi kargo firması ID’sini seçin.', 'wisdom-rain-trendyol-entegrasyon' ); ?></p>
+                </td>
+            </tr>
+
+            <tr>
+                <th scope="row">
+                    <label for="wr_trendyol_delivery_duration"><?php esc_html_e( 'Teslimat Süresi (gün)', 'wisdom-rain-trendyol-entegrasyon' ); ?></label>
+                </th>
+                <td>
+                    <input type="number"
+                           min="1"
+                           max="7"
+                           id="wr_trendyol_delivery_duration"
+                           name="<?php echo esc_attr( \WR\Trendyol\WR_Trendyol_Plugin::OPTION_KEY ); ?>[delivery_duration]"
+                           value="<?php echo esc_attr( $settings['delivery_duration'] ); ?>" />
+                    <p class="description"><?php esc_html_e( 'Trendyol SLA gereği 1-7 gün arasında olmalıdır.', 'wisdom-rain-trendyol-entegrasyon' ); ?></p>
+                </td>
+            </tr>
+
+            <tr>
+                <th scope="row">
+                    <label for="wr_trendyol_shipment_address_id"><?php esc_html_e( 'Shipment Address ID', 'wisdom-rain-trendyol-entegrasyon' ); ?></label>
+                </th>
+                <td>
+                    <input type="number"
+                           id="wr_trendyol_shipment_address_id"
+                           name="<?php echo esc_attr( \WR\Trendyol\WR_Trendyol_Plugin::OPTION_KEY ); ?>[shipment_address_id]"
+                           value="<?php echo esc_attr( $settings['shipment_address_id'] ); ?>" />
+                    <p class="description"><?php esc_html_e( 'Trendyol panelinde tanımlı shipmentAddressId değerini girin.', 'wisdom-rain-trendyol-entegrasyon' ); ?></p>
+                </td>
+            </tr>
+
+            <tr>
+                <th scope="row">
+                    <label for="wr_trendyol_return_address_id"><?php esc_html_e( 'Return Address ID', 'wisdom-rain-trendyol-entegrasyon' ); ?></label>
+                </th>
+                <td>
+                    <input type="number"
+                           id="wr_trendyol_return_address_id"
+                           name="<?php echo esc_attr( \WR\Trendyol\WR_Trendyol_Plugin::OPTION_KEY ); ?>[return_address_id]"
+                           value="<?php echo esc_attr( $settings['return_address_id'] ); ?>" />
+                    <p class="description"><?php esc_html_e( 'Trendyol panelinde tanımlı returnAddressId değerini girin.', 'wisdom-rain-trendyol-entegrasyon' ); ?></p>
                 </td>
             </tr>
 

@@ -121,6 +121,92 @@ class WR_Trendyol_Plugin {
     }
 
     /**
+     * Trendyol tarafında geçerli kargo firmaları (ID, slug ve label).
+     *
+     * @return array<string,array{ id:int, label:string }>
+     */
+    public static function get_cargo_company_map() {
+        return [
+            'yurtici'   => [ 'id' => 1, 'label' => 'Yurtiçi Kargo' ],
+            'aras'      => [ 'id' => 2, 'label' => 'Aras Kargo' ],
+            'mng'       => [ 'id' => 3, 'label' => 'MNG Kargo' ],
+            'surat'     => [ 'id' => 4, 'label' => 'Sürat Kargo' ],
+            'ptt'       => [ 'id' => 5, 'label' => 'PTT Kargo' ],
+            'ups'       => [ 'id' => 6, 'label' => 'UPS' ],
+            'hepsijet'  => [ 'id' => 7, 'label' => 'Hepsijet' ],
+            'tyexpress' => [ 'id' => 8, 'label' => 'Trendyol Express' ],
+            'dhl'       => [ 'id' => 9, 'label' => 'DHL' ],
+        ];
+    }
+
+    /**
+     * cargoCompanyId -> label eşlemesi.
+     *
+     * @return array<int,string>
+     */
+    public static function get_cargo_company_labels() {
+        $labels = [];
+
+        foreach ( self::get_cargo_company_map() as $data ) {
+            $labels[ (int) $data['id'] ] = $data['label'];
+        }
+
+        return $labels;
+    }
+
+    /**
+     * Trendyol whitelist'i (sadece sayısal ID listesi).
+     *
+     * @return int[]
+     */
+    public static function get_allowed_cargo_company_ids() {
+        return array_values( array_map( static function( $data ) {
+            return (int) $data['id'];
+        }, self::get_cargo_company_map() ) );
+    }
+
+    /**
+     * UI veya eski meta değerini Trendyol cargoCompanyId'ye çevirir.
+     *
+     * @param mixed $value Value from UI/meta/settings.
+     *
+     * @return int|null Null -> geçersiz / tanınmadı.
+     */
+    public static function normalize_cargo_company_value( $value ) {
+        $map = self::get_cargo_company_map();
+
+        if ( is_string( $value ) && isset( $map[ $value ] ) ) {
+            return (int) $map[ $value ]['id'];
+        }
+
+        $int_value = absint( $value );
+        if ( $int_value > 0 ) {
+            foreach ( $map as $slug => $data ) {
+                if ( (int) $data['id'] === $int_value ) {
+                    return (int) $data['id'];
+                }
+            }
+        }
+
+        if ( '' !== $value && null !== $value ) {
+            error_log( sprintf( 'WR TRENDYOL WARN: Invalid cargoCompanyId value detected: %s', wp_json_encode( $value ) ) );
+        }
+
+        return null;
+    }
+
+    /**
+     * cargoCompanyId whitelist kontrolü.
+     *
+     * @param int $cargo_company_id
+     *
+     * @return bool
+     */
+    public static function is_allowed_cargo_company_id( $cargo_company_id ) {
+        return in_array( (int) $cargo_company_id, self::get_allowed_cargo_company_ids(), true );
+    }
+
+    /**
      * Create API client with current settings.
      *
      * @return WR_Trendyol_API_Client

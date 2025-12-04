@@ -180,22 +180,17 @@ class WR_Trendyol_Product_Tab {
                 <?php
                 // Ayarlardan varsayılan kargo
                 $settings          = get_option( 'wr_trendyol_settings', [] );
-                $default_cargo_id  = isset( $settings['cargo_company_id'] ) ? (int) $settings['cargo_company_id'] : 0;
+                $default_cargo_id  = WR_Trendyol_Plugin::normalize_cargo_company_value( $settings['cargo_company_id'] ?? '' );
+                $default_cargo_id  = $default_cargo_id ? (int) $default_cargo_id : 0;
 
                 // Ürün bazlı kayıt varsa onu, yoksa varsayılanı göster
-                $saved_cargo_id = (int) get_post_meta( $product_id, '_wr_trendyol_cargo_company_id', true );
+                $saved_cargo_raw = get_post_meta( $product_id, '_wr_trendyol_cargo_company_id', true );
+                $saved_cargo_id  = WR_Trendyol_Plugin::normalize_cargo_company_value( $saved_cargo_raw );
                 if ( ! $saved_cargo_id && $default_cargo_id ) {
                     $saved_cargo_id = $default_cargo_id;
                 }
 
-                // Buradaki ID’ler Trendyol’un kendi cargoCompanyId değerleri olmalı
-                $cargo_options = [
-                    30 => 'PTT Kargo',
-                    10 => 'Yurtiçi Kargo',
-                    20 => 'Aras Kargo',
-                    50 => 'Sürat Kargo',
-                    60 => 'DHL', // MNG yerine DHL koyduk
-                ];
+                $cargo_options = WR_Trendyol_Plugin::get_cargo_company_labels();
                 ?>
                 <p class="form-field">
                     <label for="wr_trendyol_cargo_company_id">
@@ -462,15 +457,21 @@ class WR_Trendyol_Product_Tab {
         $brand_id           = isset( $_POST['wr_trendyol_brand_id'] ) ? sanitize_text_field( wp_unslash( $_POST['wr_trendyol_brand_id'] ) ) : '';
         $barcode            = isset( $_POST['wr_trendyol_barcode'] ) ? sanitize_text_field( wp_unslash( $_POST['wr_trendyol_barcode'] ) ) : '';
         $dimensional_weight = isset( $_POST['wr_trendyol_dimensional_weight'] ) ? wc_format_decimal( wp_unslash( $_POST['wr_trendyol_dimensional_weight'] ) ) : '';
-        $cargo_company_id   = isset( $_POST['wr_trendyol_cargo_company_id'] ) ? absint( $_POST['wr_trendyol_cargo_company_id'] ) : 0;
+        $cargo_company_raw  = isset( $_POST['wr_trendyol_cargo_company_id'] ) ? wp_unslash( $_POST['wr_trendyol_cargo_company_id'] ) : null;
+        $cargo_company_id   = ( null !== $cargo_company_raw ) ? WR_Trendyol_Plugin::normalize_cargo_company_value( $cargo_company_raw ) : null;
         $enabled            = ( isset( $_POST['wr_trendyol_enabled'] ) && 'yes' === $_POST['wr_trendyol_enabled'] ) ? 'yes' : 'no';
 
         update_post_meta( $product_id, '_wr_trendyol_brand_id', $brand_id );
         update_post_meta( $product_id, '_wr_trendyol_barcode', $barcode );
         update_post_meta( $product_id, '_wr_trendyol_dimensional_weight', $dimensional_weight );
-        if ( $cargo_company_id ) {
+        if ( null === $cargo_company_raw ) {
+            // Formda alan yoksa mevcut meta'ya dokunma (ör. hızlı düzenleme).
+        } elseif ( '' === $cargo_company_raw ) {
+            delete_post_meta( $product_id, '_wr_trendyol_cargo_company_id' );
+        } elseif ( null !== $cargo_company_id ) {
             update_post_meta( $product_id, '_wr_trendyol_cargo_company_id', $cargo_company_id );
         } else {
+            error_log( sprintf( 'WR TRENDYOL WARN: invalid cargoCompanyId posted for product %d => %s', $product_id, wp_json_encode( $cargo_company_raw ) ) );
             delete_post_meta( $product_id, '_wr_trendyol_cargo_company_id' );
         }
         update_post_meta( $product_id, '_wr_trendyol_enabled', $enabled );
