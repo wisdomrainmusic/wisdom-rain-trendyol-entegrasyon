@@ -44,7 +44,7 @@ jQuery(function($){
         });
     }
 
-    $('#wr_trendyol_load_attributes_btn').on('click', function(e){
+    $(document).on('click', '#wr_trendyol_load_attributes_btn', function(e){
         e.preventDefault();
 
         let catId =
@@ -72,14 +72,18 @@ jQuery(function($){
             post_id: postId,
             nonce: productNonce
         }, function (response) {
-            console.log('ATTRIBUTE AJAX RESPONSE:', response);
+            console.log("ATTRIBUTE AJAX RESPONSE", response);
 
             if (response.error) {
                 alert(response.error);
                 return;
             }
 
-            $('#wr_trendyol_attributes').html(response.html);
+            if (response.success && response.html) {
+                $('#wr_trendyol_attributes').html(response.html);
+            } else {
+                alert('Hata: ' + (response.data?.message || 'Bilinmeyen hata'));
+            }
         });
     });
 
