@@ -124,6 +124,7 @@ class WR_Trendyol_Product_Tab {
         $brand_id           = get_post_meta( $product_id, '_wr_trendyol_brand_id', true );
         $barcode            = get_post_meta( $product_id, '_wr_trendyol_barcode', true );
         $dimensional_weight = get_post_meta( $product_id, '_wr_trendyol_dimensional_weight', true );
+        $cargo_company_id   = get_post_meta( $product_id, '_wr_trendyol_cargo_company_id', true );
         $enabled            = 'yes' === get_post_meta( $product_id, '_wr_trendyol_enabled', true );
         $product_tid        = get_post_meta( $product_id, '_wr_trendyol_product_id', true );
 
@@ -176,6 +177,28 @@ class WR_Trendyol_Product_Tab {
                         <?php _e( 'Kargo hacimsel ağırlık.', 'wisdom-rain-trendyol-entegrasyon' ); ?>
                     </span>
                 </p>
+
+                <?php
+                woocommerce_wp_select(
+                    [
+                        'id'          => '_wr_trendyol_cargo_company_id',
+                        'label'       => 'Trendyol Kargo Firması',
+                        'value'       => $cargo_company_id,
+                        'desc_tip'    => true,
+                        'description' => 'Trendyol ürünlerinde kullanılacak kargo firması. Seçilmesi zorunludur.',
+                        'options'     => [
+                            ''   => 'Seçin… (Zorunlu)',
+                            '14' => 'PTT Kargo',
+                            '10' => 'Yurtiçi Kargo',
+                            '11' => 'Aras Kargo',
+                            '16' => 'Sürat Kargo',
+                            '13' => 'UPS',
+                            '36' => 'Trendyol Express',
+                            '20' => 'DHL Kargo',
+                        ],
+                    ]
+                );
+                ?>
 
                 <p class="form-field">
                     <label for="wr_trendyol_enabled">
@@ -422,6 +445,13 @@ class WR_Trendyol_Product_Tab {
         $brand_id           = isset( $_POST['wr_trendyol_brand_id'] ) ? sanitize_text_field( wp_unslash( $_POST['wr_trendyol_brand_id'] ) ) : '';
         $barcode            = isset( $_POST['wr_trendyol_barcode'] ) ? sanitize_text_field( wp_unslash( $_POST['wr_trendyol_barcode'] ) ) : '';
         $dimensional_weight = isset( $_POST['wr_trendyol_dimensional_weight'] ) ? wc_format_decimal( wp_unslash( $_POST['wr_trendyol_dimensional_weight'] ) ) : '';
+        if ( isset( $_POST['_wr_trendyol_cargo_company_id'] ) ) {
+            update_post_meta(
+                $product_id,
+                '_wr_trendyol_cargo_company_id',
+                sanitize_text_field( wp_unslash( $_POST['_wr_trendyol_cargo_company_id'] ) )
+            );
+        }
         $enabled            = ( isset( $_POST['wr_trendyol_enabled'] ) && 'yes' === $_POST['wr_trendyol_enabled'] ) ? 'yes' : 'no';
 
         update_post_meta( $product_id, '_wr_trendyol_brand_id', $brand_id );
