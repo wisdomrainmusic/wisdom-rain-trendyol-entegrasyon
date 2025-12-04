@@ -95,7 +95,12 @@ class WR_Trendyol_Settings_Page {
 
         $sanitized['debug'] = ! empty( $input['debug'] ) ? 1 : 0;
 
-        $sanitized['cargo_company_id']    = isset( $input['cargo_company_id'] ) ? absint( $input['cargo_company_id'] ) : 0;
+        $normalized_cargo = isset( $input['cargo_company_id'] ) ? WR_Trendyol_Plugin::normalize_cargo_company_value( $input['cargo_company_id'] ) : null;
+        if ( null === $normalized_cargo && isset( $input['cargo_company_id'] ) && '' !== $input['cargo_company_id'] ) {
+            error_log( sprintf( 'WR TRENDYOL WARN: Invalid cargo_company_id submitted in settings => %s', wp_json_encode( $input['cargo_company_id'] ) ) );
+        }
+
+        $sanitized['cargo_company_id']    = $normalized_cargo ? (int) $normalized_cargo : 0;
         $sanitized['delivery_duration']   = isset( $input['delivery_duration'] ) ? absint( $input['delivery_duration'] ) : 1;
         $sanitized['shipment_address_id'] = isset( $input['shipment_address_id'] ) ? absint( $input['shipment_address_id'] ) : 0;
         $sanitized['return_address_id']   = isset( $input['return_address_id'] ) ? absint( $input['return_address_id'] ) : 0;

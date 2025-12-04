@@ -1,5 +1,6 @@
 <?php
 use WR\Trendyol\WR_Trendyol_API_Client;
+use WR\Trendyol\WR_Trendyol_Plugin;
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
@@ -25,17 +26,7 @@ class WR_Trendyol_Product_Mapper {
      * @return array<string,int>
      */
     protected function get_cargo_company_map() {
-        return [
-            'yurtici'   => 1,
-            'aras'      => 2,
-            'mng'       => 3,
-            'surat'     => 4,
-            'ptt'       => 5,
-            'ups'       => 6,
-            'hepsijet'  => 7,
-            'tyexpress' => 8,
-            'dhl'       => 9,
-        ];
+        return WR_Trendyol_Plugin::get_cargo_company_map();
     }
 
     /**
@@ -46,22 +37,7 @@ class WR_Trendyol_Product_Mapper {
      * @return int|null
      */
     protected function map_cargo_value_to_id( $value ) {
-        $map = $this->get_cargo_company_map();
-
-        if ( is_string( $value ) && isset( $map[ $value ] ) ) {
-            return (int) $map[ $value ];
-        }
-
-        $int_value = absint( $value );
-        if ( $int_value > 0 ) {
-            foreach ( $map as $slug => $id ) {
-                if ( (int) $id === $int_value ) {
-                    return (int) $id;
-                }
-            }
-        }
-
-        return null;
+        return WR_Trendyol_Plugin::normalize_cargo_company_value( $value );
     }
 
     /**
@@ -77,14 +53,28 @@ class WR_Trendyol_Product_Mapper {
 
         // 1) Ürün bazlı seçim
         $product_cargo = get_post_meta( $product_id, '_wr_trendyol_cargo_company_id', true );
-        if ( ! empty( $product_cargo ) ) {
-            return (int) $product_cargo;
+        $cargo_company_id = WR_Trendyol_Plugin::normalize_cargo_company_value( $product_cargo );
+        if ( $cargo_company_id ) {
+            return (int) $cargo_company_id;
+        }
+
+        // Variation ise parent değerini kontrol et
+        $product = wc_get_product( $product_id );
+        if ( $product && $product->is_type( 'variation' ) ) {
+            $parent_id        = $product->get_parent_id();
+            $parent_cargo_raw = $parent_id ? get_post_meta( $parent_id, '_wr_trendyol_cargo_company_id', true ) : '';
+            $parent_cargo_id  = WR_Trendyol_Plugin::normalize_cargo_company_value( $parent_cargo_raw );
+
+            if ( $parent_cargo_id ) {
+                return (int) $parent_cargo_id;
+            }
         }
 
         // 2) Plugin ayarlarından varsayılan
-        $settings = get_option( 'wr_trendyol_settings', [] );
-        if ( ! empty( $settings['cargo_company_id'] ) ) {
-            return (int) $settings['cargo_company_id'];
+        $settings = $this->client->get_settings();
+        $default_cargo = WR_Trendyol_Plugin::normalize_cargo_company_value( $settings['cargo_company_id'] ?? '' );
+        if ( $default_cargo ) {
+            return (int) $default_cargo;
         }
 
         return 0;
@@ -135,6 +125,15 @@ class WR_Trendyol_Product_Mapper {
             return new WP_Error(
                 'wr_trendyol_missing_cargo_company',
                 __( 'Trendyol için kargo firması (cargoCompanyId) seçilmemiş. Lütfen bir kargo firması seçin.', 'wisdom-rain-trendyol-entegrasyon' )
+            );
+        }
+
+        if ( ! WR_Trendyol_Plugin::is_allowed_cargo_company_id( $cargo_company_id ) ) {
+            error_log( sprintf( 'WR TRENDYOL PAYLOAD ABORT: product %d invalid cargoCompanyId=%s', $product_id, wp_json_encode( $cargo_company_id ) ) );
+
+            return new WP_Error(
+                'wr_trendyol_invalid_cargo_company',
+                __( 'Geçersiz Trendyol kargo firması seçildi. Lütfen geçerli bir cargoCompanyId seçin.', 'wisdom-rain-trendyol-entegrasyon' )
             );
         }
 
@@ -192,7 +191,7 @@ class WR_Trendyol_Product_Mapper {
             return $prices;
         }
 
-        $logistics = $this->map_logistics();
+        $logistics = $this->map_logistics( $product_id );
         if ( is_wp_error( $logistics ) ) {
             return $logistics;
         }
@@ -219,9 +218,12 @@ class WR_Trendyol_Product_Mapper {
         );
 
         error_log( sprintf(
-            'WR TRENDYOL PAYLOAD LOGISTICS: product %d cargoCompanyId=%d',
+            'WR TRENDYOL PAYLOAD LOGISTICS: product %d cargoCompanyId=%d deliveryDuration=%d shipmentAddressId=%d returnAddressId=%d',
             $product_id,
-            $cargo_company_id
+            $cargo_company_id,
+            isset( $logistics['deliveryDuration'] ) ? (int) $logistics['deliveryDuration'] : 0,
+            isset( $logistics['shipmentAddressId'] ) ? (int) $logistics['shipmentAddressId'] : 0,
+            isset( $logistics['returnAddressId'] ) ? (int) $logistics['returnAddressId'] : 0
         ) );
 
         return $payload_item;
@@ -374,10 +376,10 @@ class WR_Trendyol_Product_Mapper {
      *
      * @return array|WP_Error
      */
-    protected function map_logistics() {
+    protected function map_logistics( $product_id = 0 ) {
         $settings = $this->client->get_settings();
 
-        $cargo_company_id = $this->map_cargo_value_to_id( $settings['cargo_company_id'] ?? '' );
+        $cargo_company_id = $product_id ? $this->get_cargo_company_id_for_product( $product_id ) : $this->map_cargo_value_to_id( $settings['cargo_company_id'] ?? '' );
         $delivery_duration = isset( $settings['delivery_duration'] ) ? absint( $settings['delivery_duration'] ) : 1;
         $shipment_address_id = isset( $settings['shipment_address_id'] ) ? absint( $settings['shipment_address_id'] ) : 0;
         $return_address_id   = isset( $settings['return_address_id'] ) ? absint( $settings['return_address_id'] ) : 0;
@@ -386,6 +388,12 @@ class WR_Trendyol_Product_Mapper {
 
         if ( ! $cargo_company_id ) {
             return new WP_Error( 'wr_trendyol_missing_cargo_company', __( 'Lütfen bir kargo firması seçin.', 'wisdom-rain-trendyol-entegrasyon' ) );
+        }
+
+        if ( ! WR_Trendyol_Plugin::is_allowed_cargo_company_id( $cargo_company_id ) ) {
+            error_log( sprintf( 'WR TRENDYOL LOGISTICS INVALID CARGO: product %d cargoCompanyId=%s', absint( $product_id ), wp_json_encode( $cargo_company_id ) ) );
+
+            return new WP_Error( 'wr_trendyol_invalid_cargo_company', __( 'Geçersiz Trendyol kargo firması seçildi. Lütfen geçerli bir cargoCompanyId seçin.', 'wisdom-rain-trendyol-entegrasyon' ) );
         }
 
         if ( ! $shipment_address_id ) {
