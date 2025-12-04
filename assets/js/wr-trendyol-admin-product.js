@@ -1,86 +1,94 @@
-jQuery(function ($) {
+jQuery(function($){
 
-    console.log('WR TRENDYOL PRODUCT JS ACTIVE');
+    console.log("WR TRENDYOL PRODUCT JS ACTIVE");
 
-    const config = window.wrTrendyolProduct || window.WRTrendyolProduct || null;
+    const btn = $('#wr_trendyol_load_attributes_btn');
 
-    // Keep hidden/category select in sync for API calls
-    const $dropdown = $('#wr_trendyol_category_select');
-    const $hidden = $('#wr_trendyol_category_id');
-
-    if ($dropdown.length) {
-        $dropdown.on('change', function () {
-            const selectedID = $(this).find(':selected').data('category-id') || '';
-            $hidden.val(selectedID);
-            console.log('CATEGORY SELECTED:', selectedID);
-        });
+    if (!btn.length) {
+        console.warn("WR Trendyol: load button not found.");
+        return;
     }
 
-    const $categoryField = $('#wr_trendyol_category_id');
-    const $loadBtn = $('#wr_trendyol_load_attributes_btn');
+    btn.on("click", function (e) {
+        e.preventDefault();
 
-    function loadCategoryAttributes(triggerSource) {
-        const productId = $loadBtn.data('product-id') || $('#post_ID').val();
-        const categoryId = $categoryField.val();
+        const category_id = $('#product_cat').val() || null;
+        const nonce = wr_trendyol_product_data.nonce;
+        const post_id = wr_trendyol_product_data.post_id;
 
-        if (!config) {
-            console.error('WR TRENDYOL CONFIG MISSING');
-            alert('Script yapılandırması bulunamadı. Lütfen sayfayı yenileyip tekrar deneyin.');
+        if (!category_id) {
+            alert("Lütfen bir kategori seçin.");
             return;
         }
 
-        if (!categoryId) {
-            alert(config.missing_category_msg || 'Lütfen önce Trendyol kategorisini seçin.');
-            return;
-        }
+        btn.prop("disabled", true).text("Yükleniyor...");
 
-        $loadBtn.prop('disabled', true).text('Yükleniyor...');
+        $.ajax({
+            url: ajaxurl,
+            method: "POST",
+            dataType: "json",
+            data: {
+                action: "wr_trendyol_load_attributes",
+                category_id: category_id,
+                post_id: post_id,
+                nonce: nonce
+            },
+            success: function (response) {
+                console.log("WR ATTR RESPONSE:", response);
 
-        $.post(
-            config.ajax_url,
-            {
-                action: 'wr_trendyol_load_attributes',
-                nonce: config.nonce,
-                product_id: productId,
-                category_id: categoryId,
-            }
-        )
-            .done(function (response) {
+                // ❌ eski sistem burada alert(response) diyordu → [object Object]
+                // ✔ yeni sistem: response.success kontrolü + güvenli JSON parse
 
-                if (!response || !response.success || !response.data) {
-                    console.error('WR TRENDYOL ATTR ERROR', response);
-                    alert((response && response.data) ? response.data : 'Özellikler yüklenirken bir hata oluştu.');
+                if (!response) {
+                    alert("Sunucudan geçersiz yanıt alındı.");
                     return;
                 }
 
-                if (response.data.html) {
-                    $('#wr_trendyol_attributes_wrap').html(response.data.html);
+                if (response.success === true) {
+
+                    const payload = response.data || [];
+                    const attributes = Array.isArray(payload) ? payload : (payload.attributes || []);
+
+                    if (!attributes.length) {
+                        alert("Bu kategori için Trendyol tarafından zorunlu özellik bulunmuyor.");
+                        return;
+                    }
+
+                    // FORM ALANINA YAZ
+                    const box = $('#wr_trendyol_attributes_box');
+                    if (box.length) {
+                        box.html("");
+
+                        attributes.forEach(attr => {
+                            const row = `
+                                <div class="wr-trendyol-attr-row">
+                                    <label>${attr.name}</label>
+                                    <input type="text" name="wr_trendyol_attributes[${attr.id}]" value="" />
+                                </div>
+                            `;
+                            box.append(row);
+                        });
+                    }
+
+                    alert("Özellikler başarıyla yüklendi.");
+                    return;
                 }
 
-                console.log('WR TRENDYOL ATTRIBUTES LOADED', {
-                    category_id: response.data.category_id,
-                    count: response.data.count,
-                    attributes: response.data.attributes,
-                    trigger: triggerSource,
-                });
+                // ERROR CASE
+                const msg = (response.data && response.data.message)
+                    ? response.data.message
+                    : "Trendyol'dan geçersiz yanıt alındı.";
 
-            })
-            .fail(function (xhr) {
-                console.error('WR TRENDYOL ATTR AJAX FAIL', xhr);
-                alert('Sunucuya ulaşılamadı. Lütfen sayfayı yenileyip tekrar deneyin.');
-            })
-            .always(function () {
-                $loadBtn.prop('disabled', false).text('Özellikleri Yükle');
-            });
-    }
-
-    // Auto-load attributes when the category is changed manually
-    $categoryField.on('change', function () {
-        loadCategoryAttributes('category-change');
+                alert(msg);
+            },
+            error: function (xhr, status) {
+                console.error("WR AJAX ERROR:", status, xhr.responseText);
+                alert("Trendyol bağlantı hatası. Lütfen tekrar deneyin.");
+            },
+            complete: function () {
+                btn.prop("disabled", false).text("Özellikleri Yükle");
+            }
+        });
     });
 
-    $loadBtn.on('click', function (e) {
-        e.preventDefault();
-        loadCategoryAttributes('button');
-    });
 });
