@@ -257,8 +257,8 @@ class WR_Trendyol_Product_Tab {
         $selected_id = get_post_meta( $post_id, '_wr_trendyol_category_id', true );
         ?>
 
-        <select id="wr_trendyol_category_select"
-                name="wr_trendyol_category_select"
+        <select id="wr_trendyol_category_id"
+                name="wr_trendyol_category_id"
                 style="min-width: 280px;">
             <option value=""><?php esc_html_e( 'Bir Trendyol kategorisi seçin', 'wr-trendyol' ); ?></option>
 
@@ -270,11 +270,6 @@ class WR_Trendyol_Product_Tab {
                 </option>
             <?php endforeach; ?>
         </select>
-
-        <input type="hidden"
-               id="wr_trendyol_category_id"
-               name="wr_trendyol_category_id"
-               value="<?php echo esc_attr( $selected_id ); ?>" />
 
         <?php
     }
