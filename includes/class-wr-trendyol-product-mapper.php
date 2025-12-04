@@ -40,6 +40,7 @@ class WR_Trendyol_Product_Mapper {
         $brand_id           = (int) get_post_meta( $product_id, '_wr_trendyol_brand_id', true );
         $barcode            = (string) get_post_meta( $product_id, '_wr_trendyol_barcode', true );
         $dimensional_weight = get_post_meta( $product_id, '_wr_trendyol_dimensional_weight', true );
+        $cargo_company_id   = get_post_meta( $product_id, '_wr_trendyol_cargo_company_id', true );
         $enabled            = get_post_meta( $product_id, '_wr_trendyol_enabled', true ) === 'yes';
 
         if ( ! $enabled ) {
@@ -56,6 +57,13 @@ class WR_Trendyol_Product_Mapper {
 
         if ( empty( $barcode ) ) {
             return new WP_Error( 'wr_trendyol_missing_barcode', 'Barkod zorunlu alandır. Lütfen ürün için barkod girin.' );
+        }
+
+        if ( empty( $cargo_company_id ) ) {
+            return new WP_Error(
+                'wr_trendyol_missing_cargo',
+                'Trendyol için kargo firması (cargoCompanyId) seçilmemiş. Lütfen bir kargo firması seçin.'
+            );
         }
 
         if ( $dimensional_weight === '' ) {
@@ -132,7 +140,7 @@ class WR_Trendyol_Product_Mapper {
             'listPrice'         => $prices['listPrice'],
             'salePrice'         => $prices['salePrice'],
             'vatRate'           => $prices['vatRate'],
-            'cargoCompanyId'    => $logistics['cargoCompanyId'],
+            'cargoCompanyId'    => (int) $cargo_company_id,
             'deliveryDuration'  => $logistics['deliveryDuration'],
             'shipmentAddressId' => $logistics['shipmentAddressId'],
             'returnAddressId'   => $logistics['returnAddressId'],
