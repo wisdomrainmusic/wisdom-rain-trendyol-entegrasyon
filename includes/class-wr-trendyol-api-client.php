@@ -263,6 +263,45 @@ class WR_Trendyol_API_Client {
     }
 
     /**
+     * Normalize Trendyol attribute response payload.
+     *
+     * @param array $body Decoded JSON response.
+     *
+     * @return array
+     */
+    private function wr_normalize_attribute_payload( $body ) {
+        if ( ! is_array( $body ) ) {
+            return [];
+        }
+
+        if ( isset( $body['categoryAttributes'] ) && is_array( $body['categoryAttributes'] ) && ! empty( $body['categoryAttributes'] ) ) {
+            return $body['categoryAttributes'];
+        }
+
+        if ( isset( $body['attributes'] ) && is_array( $body['attributes'] ) && ! empty( $body['attributes'] ) ) {
+            return $body['attributes'];
+        }
+
+        if ( isset( $body['result'] ) && is_array( $body['result'] ) ) {
+            $normalized = $this->wr_normalize_attribute_payload( $body['result'] );
+            if ( ! empty( $normalized ) ) {
+                return $normalized;
+            }
+        }
+
+        foreach ( $body as $value ) {
+            if ( is_array( $value ) ) {
+                $normalized = $this->wr_normalize_attribute_payload( $value );
+                if ( ! empty( $normalized ) ) {
+                    return $normalized;
+                }
+            }
+        }
+
+        return [];
+    }
+
+    /**
      * Belirli bir kategori için attribute listesi
      *
      * @param int $category_id
@@ -291,36 +330,67 @@ class WR_Trendyol_API_Client {
         // NEW OFFICIAL ENDPOINT:
         // /integration/product/product-categories/{categoryId}/attributes
 
-        $path = sprintf( 'https://apigw.trendyol.com/integration/product/product-categories/%d/attributes', $category_id );
-        $response = $this->request( 'GET', $path );
+        $path     = sprintf( 'https://apigw.trendyol.com/integration/product/product-categories/%d/attributes', $category_id );
+        $response = wp_remote_get(
+            $path,
+            [
+                'timeout'   => 30,
+                'headers'   => $this->get_base_headers(),
+                'sslverify' => true,
+            ]
+        );
 
         if ( is_wp_error( $response ) ) {
-            return $response;
+            return $this->wrap_error( 'http_request_failed', $response->get_error_message(), [
+                'url'  => $path,
+                'args' => $this->debug ? $response : null,
+            ] );
         }
 
-        $body = isset( $response['body'] ) ? $response['body'] : array();
+        $status   = wp_remote_retrieve_response_code( $response );
+        $body_raw = wp_remote_retrieve_body( $response );
 
-        // Trendyol yeni attribute formatı
-        $attrs = [];
+        if ( 200 !== $status || '' === $body_raw ) {
+            return new WP_Error(
+                'wr_trendyol_attr_http_error',
+                sprintf( 'Unexpected HTTP response from Trendyol attributes endpoint: %d', $status ),
+                [
+                    'status' => $status,
+                    'body'   => $body_raw,
+                ]
+            );
+        }
 
-        if ( isset( $body['categoryAttributes'] ) && is_array( $body['categoryAttributes'] ) ) {
-            $attrs = $body['categoryAttributes'];
-        }
-        // Eski fallback (bazı seller hesaplarında farklı dönebiliyor)
-        elseif ( isset( $body['attributes'] ) && is_array( $body['attributes'] ) ) {
-            $attrs = $body['attributes'];
+        $decoded = json_decode( $body_raw, true );
+
+        if ( null === $decoded && JSON_ERROR_NONE !== json_last_error() ) {
+            return new WP_Error(
+                'wr_trendyol_attr_json_error',
+                'Unable to decode Trendyol attribute JSON response.',
+                [
+                    'body'  => $body_raw,
+                    'error' => json_last_error_msg(),
+                ]
+            );
         }
 
-        // Her ihtimale karşı array değilse boş yap
-        if ( ! is_array( $attrs ) ) {
-            $attrs = [];
-        }
+        $attrs = $this->wr_normalize_attribute_payload( $decoded );
 
         // Do not cache empty results to avoid locking the category into a blank state.
         if ( empty( $attrs ) ) {
-            error_log( 'WR TRENDYOL ATTR EMPTY for category ' . $category_id );
+            if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+                error_log( sprintf( 'WR TRENDYOL ATTR EMPTY NORMALIZED for category %d, raw=%s', $category_id, substr( $body_raw, 0, 500 ) ) );
+            }
             delete_transient( $cache_key );
-            return [];
+
+            return new WP_Error(
+                'wr_trendyol_attr_empty',
+                'Trendyol returned an empty attribute list for this category.',
+                [
+                    'category_id' => $category_id,
+                    'body'        => $decoded,
+                ]
+            );
         }
 
         error_log( 'WR TRENDYOL ATTR FETCHED for category ' . $category_id . ' count=' . count( $attrs ) );

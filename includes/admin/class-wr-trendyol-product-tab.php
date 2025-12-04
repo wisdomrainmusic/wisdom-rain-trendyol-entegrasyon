@@ -517,13 +517,30 @@ class WR_Trendyol_Product_Tab {
         $attributes = $client->get_category_attributes( $category_id );
 
         if ( is_wp_error( $attributes ) ) {
-            error_log( 'WR TRENDYOL ATTR ERROR: ' . $attributes->get_error_message() );
-            wp_send_json_error( $attributes->get_error_message() );
-        }
+            $code    = $attributes->get_error_code();
+            $message = $attributes->get_error_message();
 
-        if ( empty( $attributes ) ) {
-            error_log( 'WR TRENDYOL ATTR ERROR: empty attribute payload for category ' . $category_id );
-            wp_send_json_error( __( 'No attributes returned from Trendyol for this category.', 'wisdom-rain-trendyol-entegrasyon' ) );
+            if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+                error_log( sprintf( 'WR TRENDYOL ATTR ERROR [%s] for category %d: %s', $code, $category_id, $message ) );
+            }
+
+            if ( 'wr_trendyol_attr_empty' === $code ) {
+                wp_send_json_error(
+                    [
+                        'message'     => __( 'No attributes available for this Trendyol category.', 'wisdom-rain-trendyol-entegrasyon' ),
+                        'category_id' => $category_id,
+                        'error_code'  => $code,
+                    ]
+                );
+            }
+
+            wp_send_json_error(
+                [
+                    'message'     => __( 'Error while fetching attributes from Trendyol API.', 'wisdom-rain-trendyol-entegrasyon' ),
+                    'category_id' => $category_id,
+                    'error_code'  => $code,
+                ]
+            );
         }
 
         ob_start();
