@@ -100,7 +100,7 @@ class WR_Trendyol_Product_Mapper {
         }
         $brand_id           = (int) get_post_meta( $product_id, '_wr_trendyol_brand_id', true );
         $barcode            = (string) get_post_meta( $product_id, '_wr_trendyol_barcode', true );
-        $origin_id          = absint( get_post_meta( $product_id, '_wr_trendyol_origin', true ) );
+        $product_country_id = absint( get_post_meta( $product_id, '_wr_trendyol_origin', true ) );
         $dimensional_weight = get_post_meta( $product_id, '_wr_trendyol_dimensional_weight', true );
         $enabled            = get_post_meta( $product_id, '_wr_trendyol_enabled', true ) === 'yes';
 
@@ -120,7 +120,7 @@ class WR_Trendyol_Product_Mapper {
             return new WP_Error( 'missing_barcode', 'Barkod (EAN) zorunludur.' );
         }
 
-        if ( $origin_id <= 0 ) {
+        if ( $product_country_id <= 0 ) {
             return new WP_Error( 'missing_origin', 'Menşei (productCountryId) zorunludur.' );
         }
 
@@ -219,7 +219,7 @@ class WR_Trendyol_Product_Mapper {
             'title'             => $title,
             'brandId'           => $brand_id,
             'categoryId'        => $category_id,
-            'productCountryId'  => $origin_id,
+            'productCountryId'  => $product_country_id,
             'stockCode'         => $sku,
             'quantity'          => (int) $quantity,
             'dimensionalWeight' => (float) $dimensional_weight,
