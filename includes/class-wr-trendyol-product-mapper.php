@@ -20,6 +20,73 @@ class WR_Trendyol_Product_Mapper {
     }
 
     /**
+     * Trendyol kargo firma ID eşlemesi.
+     *
+     * @return array<string,int>
+     */
+    protected function get_cargo_company_map() {
+        return [
+            'yurtici'   => 1,
+            'aras'      => 2,
+            'mng'       => 3,
+            'surat'     => 4,
+            'ptt'       => 5,
+            'ups'       => 6,
+            'hepsijet'  => 7,
+            'tyexpress' => 8,
+            'dhl'       => 9,
+        ];
+    }
+
+    /**
+     * Değer (slug veya eski ID) bilgisini cargoCompanyId'ye çevirir.
+     *
+     * @param string|int $value Value from product meta or settings.
+     *
+     * @return int|null
+     */
+    protected function map_cargo_value_to_id( $value ) {
+        $map = $this->get_cargo_company_map();
+
+        if ( is_string( $value ) && isset( $map[ $value ] ) ) {
+            return (int) $map[ $value ];
+        }
+
+        $int_value = absint( $value );
+        if ( $int_value > 0 ) {
+            foreach ( $map as $slug => $id ) {
+                if ( (int) $id === $int_value ) {
+                    return (int) $id;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Önce ürün metası, sonra ayarlar üzerinden cargoCompanyId üretir.
+     *
+     * @param string|int $product_value Raw product meta value.
+     *
+     * @return int|WP_Error
+     */
+    protected function resolve_cargo_company_id( $product_value ) {
+        $cargo_company_id = $this->map_cargo_value_to_id( $product_value );
+
+        if ( null === $cargo_company_id ) {
+            $settings         = $this->client->get_settings();
+            $cargo_company_id = $this->map_cargo_value_to_id( $settings['cargo_company_id'] ?? '' );
+        }
+
+        if ( null === $cargo_company_id ) {
+            return new WP_Error( 'wr_trendyol_missing_cargo', 'Lütfen bir kargo firması seçin.' );
+        }
+
+        return $cargo_company_id;
+    }
+
+    /**
      * Tek bir WooCommerce ürününü Trendyol payload'ına dönüştürür
      *
      * @param int $product_id
@@ -40,7 +107,7 @@ class WR_Trendyol_Product_Mapper {
         $brand_id           = (int) get_post_meta( $product_id, '_wr_trendyol_brand_id', true );
         $barcode            = (string) get_post_meta( $product_id, '_wr_trendyol_barcode', true );
         $dimensional_weight = get_post_meta( $product_id, '_wr_trendyol_dimensional_weight', true );
-        $cargo_company_id   = get_post_meta( $product_id, '_wr_trendyol_cargo_company_id', true );
+        $cargo_company_meta = get_post_meta( $product_id, '_wr_trendyol_cargo_company_id', true );
         $enabled            = get_post_meta( $product_id, '_wr_trendyol_enabled', true ) === 'yes';
 
         if ( ! $enabled ) {
@@ -59,11 +126,9 @@ class WR_Trendyol_Product_Mapper {
             return new WP_Error( 'wr_trendyol_missing_barcode', 'Barkod zorunlu alandır. Lütfen ürün için barkod girin.' );
         }
 
-        if ( empty( $cargo_company_id ) ) {
-            return new WP_Error(
-                'wr_trendyol_missing_cargo',
-                'Trendyol için kargo firması (cargoCompanyId) seçilmemiş. Lütfen bir kargo firması seçin.'
-            );
+        $cargo_company_id = $this->resolve_cargo_company_id( $cargo_company_meta );
+        if ( is_wp_error( $cargo_company_id ) ) {
+            return $cargo_company_id;
         }
 
         if ( $dimensional_weight === '' ) {
@@ -299,7 +364,7 @@ class WR_Trendyol_Product_Mapper {
     protected function map_logistics() {
         $settings = $this->client->get_settings();
 
-        $cargo_company_id = isset( $settings['cargo_company_id'] ) ? absint( $settings['cargo_company_id'] ) : 0;
+        $cargo_company_id = $this->map_cargo_value_to_id( $settings['cargo_company_id'] ?? '' );
         $delivery_duration = isset( $settings['delivery_duration'] ) ? absint( $settings['delivery_duration'] ) : 1;
         $shipment_address_id = isset( $settings['shipment_address_id'] ) ? absint( $settings['shipment_address_id'] ) : 0;
         $return_address_id   = isset( $settings['return_address_id'] ) ? absint( $settings['return_address_id'] ) : 0;
@@ -307,7 +372,7 @@ class WR_Trendyol_Product_Mapper {
         $delivery_duration = max( 1, min( 7, $delivery_duration ) );
 
         if ( ! $cargo_company_id ) {
-            return new WP_Error( 'wr_trendyol_missing_cargo_company', __( 'Trendyol için kargo firması (cargoCompanyId) zorunlu.', 'wisdom-rain-trendyol-entegrasyon' ) );
+            return new WP_Error( 'wr_trendyol_missing_cargo_company', __( 'Lütfen bir kargo firması seçin.', 'wisdom-rain-trendyol-entegrasyon' ) );
         }
 
         if ( ! $shipment_address_id ) {
