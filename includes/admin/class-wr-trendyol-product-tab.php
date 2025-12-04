@@ -537,15 +537,21 @@ class WR_Trendyol_Product_Tab {
      * AJAX: ürünü Trendyol'a gönder.
      */
     public function ajax_push_product() {
-        check_ajax_referer( 'wr_trendyol_product_nonce', 'nonce' );
 
         if ( ! current_user_can( 'edit_products' ) ) {
-            wp_send_json_error( [ 'message' => __( 'Yetkisiz.', 'wisdom-rain-trendyol-entegrasyon' ) ] );
+            wp_send_json_error( [ 'message' => 'Yetkiniz yok.' ] );
         }
 
-        $product_id = isset( $_POST['product_id'] ) ? absint( $_POST['product_id'] ) : 0;
-        if ( ! $product_id ) {
-            wp_send_json_error( [ 'message' => __( 'Geçersiz ürün ID.', 'wisdom-rain-trendyol-entegrasyon' ) ] );
+        $nonce = isset($_POST['nonce']) ? sanitize_text_field($_POST['nonce']) : '';
+
+        if ( ! wp_verify_nonce( $nonce, 'wr_trendyol_product_nonce' ) ) {
+            wp_send_json_error( [ 'message' => 'Nonce hatası.' ] );
+        }
+
+        $product_id = isset($_POST['product_id']) ? absint($_POST['product_id']) : 0;
+
+        if (!$product_id) {
+            wp_send_json_error( [ 'message' => 'Geçersiz ürün ID.' ] );
         }
 
         require_once WR_TRENDYOL_PLUGIN_PATH . 'includes/class-wr-trendyol-product-mapper.php';
@@ -559,18 +565,14 @@ class WR_Trendyol_Product_Tab {
         $result = $sync->push_single_product( $product_id );
 
         if ( is_wp_error( $result ) ) {
-            wp_send_json_error(
-                [
-                    'message' => $result->get_error_message(),
-                ]
-            );
+            wp_send_json_error([
+                'message' => $result->get_error_message()
+            ]);
         }
 
-        wp_send_json_success(
-            [
-                'message'    => __( "Ürün Trendyol'a gönderildi.", 'wisdom-rain-trendyol-entegrasyon' ),
-                'product_id' => isset( $result['product_id'] ) ? $result['product_id'] : '',
-            ]
-        );
+        wp_send_json_success([
+            'message'    => "Ürün Trendyol'a başarıyla gönderildi!",
+            'product_id' => $result['product_id'] ?? ''
+        ]);
     }
 }
