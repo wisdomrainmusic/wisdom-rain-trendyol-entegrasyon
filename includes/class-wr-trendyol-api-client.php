@@ -16,11 +16,12 @@ class WR_Trendyol_API_Client {
     protected $debug = false;
 
     /**
-     * Trendyol SAPIGW – zorunlu host
+     * Trendyol yeni gateway – ürün gönderimi için zorunlu SAPIGW adresi
      */
     protected $environments = [
-        WR_Trendyol_Plugin::ENV_PROD    => 'https://api.trendyol.com/sapigw/',
-        WR_Trendyol_Plugin::ENV_SANDBOX => 'https://api.trendyol.com/sapigw/',
+        // Resmi APIGW hostları
+        WR_Trendyol_Plugin::ENV_PROD    => 'https://apigw.trendyol.com',
+        WR_Trendyol_Plugin::ENV_SANDBOX => 'https://stageapigw.trendyol.com',
     ];
 
     public function __construct( array $settings ) {
@@ -185,10 +186,11 @@ class WR_Trendyol_API_Client {
     }
 
     /**
-     * 🚀 ÜRÜN GÖNDERİM ENDPOINT – DOĞRU FORMAT
+     * 🚀 ÜRÜN GÖNDERİM ENDPOINT — DOĞRU HALİ
      */
     public function get_products_path() {
-        return "suppliers/{$this->seller_id}/products";
+        // Resmi dokümantasyon: /suppliers/{supplierId}/v2/products
+        return sprintf( '/suppliers/%s/v2/products', rawurlencode( $this->seller_id ) );
     }
 
     /**
@@ -199,7 +201,8 @@ class WR_Trendyol_API_Client {
         if ( $cached = get_transient('wr_trendyol_categories') )
             return $cached;
 
-        $path = 'https://api.trendyol.com/sapigw/integration/product/product-categories';
+        // Base URL apigw.trendyol.com olduğundan relative path kullanıyoruz
+        $path = '/integration/product/product-categories';
         $res  = $this->request('GET', $path);
 
         if ( is_wp_error($res) ) return $res;
