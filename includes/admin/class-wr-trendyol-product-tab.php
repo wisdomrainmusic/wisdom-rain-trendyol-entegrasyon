@@ -167,9 +167,26 @@ class WR_Trendyol_Product_Tab {
 
                 <?php
                 $origin_options = [
-                    1 => __( 'Türkiye', 'wisdom-rain-trendyol-entegrasyon' ),
-                    2 => __( 'Almanya', 'wisdom-rain-trendyol-entegrasyon' ),
-                    3 => __( 'Çin', 'wisdom-rain-trendyol-entegrasyon' ),
+                    1  => __( 'Türkiye', 'wisdom-rain-trendyol-entegrasyon' ),
+                    3  => __( 'Almanya', 'wisdom-rain-trendyol-entegrasyon' ),
+                    4  => __( 'Çin', 'wisdom-rain-trendyol-entegrasyon' ),
+                    2  => __( 'ABD', 'wisdom-rain-trendyol-entegrasyon' ),
+                    5  => __( 'Vietnam', 'wisdom-rain-trendyol-entegrasyon' ),
+                    6  => __( 'Hindistan', 'wisdom-rain-trendyol-entegrasyon' ),
+                    7  => __( 'İtalya', 'wisdom-rain-trendyol-entegrasyon' ),
+                    8  => __( 'Fransa', 'wisdom-rain-trendyol-entegrasyon' ),
+                    9  => __( 'Hollanda', 'wisdom-rain-trendyol-entegrasyon' ),
+                    10 => __( 'İngiltere', 'wisdom-rain-trendyol-entegrasyon' ),
+                    11 => __( 'İspanya', 'wisdom-rain-trendyol-entegrasyon' ),
+                    12 => __( 'İsviçre', 'wisdom-rain-trendyol-entegrasyon' ),
+                    13 => __( 'Belçika', 'wisdom-rain-trendyol-entegrasyon' ),
+                    14 => __( 'Polonya', 'wisdom-rain-trendyol-entegrasyon' ),
+                    15 => __( 'Çekya', 'wisdom-rain-trendyol-entegrasyon' ),
+                    16 => __( 'Japonya', 'wisdom-rain-trendyol-entegrasyon' ),
+                    17 => __( 'Güney Kore', 'wisdom-rain-trendyol-entegrasyon' ),
+                    18 => __( 'Tayland', 'wisdom-rain-trendyol-entegrasyon' ),
+                    19 => __( 'Tayvan', 'wisdom-rain-trendyol-entegrasyon' ),
+                    20 => __( 'Endonezya', 'wisdom-rain-trendyol-entegrasyon' ),
                 ];
                 ?>
                 <p class="form-field">
